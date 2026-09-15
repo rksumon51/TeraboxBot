@@ -1,0 +1,29 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--tg-theme-bg-color, #000);
+    color: var(--tg-theme-text-color, #fff);
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+.video-container {
+    margin: 20px 0;
+}
+video {
+    width: 100%;
+    border-radius: 12px;
+    background: #111;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+.download-btn {
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    width: 100%;
+    cursor: pointer;
+    margin-top: 10px;
+}
