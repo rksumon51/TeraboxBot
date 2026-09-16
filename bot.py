@@ -93,15 +93,24 @@ async def handle_link(message: types.Message):
         markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="▶️ Watch & Download", web_app=WebAppInfo(url=player_url))]])
         await msg.edit_text(f"📁 <b>{title}</b>\n\n⚠️ File is too large. Watch below:", reply_markup=markup, parse_mode=ParseMode.HTML)
 
-# === API Routes for Web Panel ===
 def cors_headers(): return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
 async def options_handler(request): return web.Response(headers=cors_headers())
 
 async def api_get_stats(request):
-    users = await db.get_all_users()
+    raw_users = await db.get_all_users()
     subs = await db.get_all_fsubs()
     admins = await db.get_all_admins()
     
+    # 🔴 ডুপ্লিকেট ইউজার ফিক্স লজিক
+    unique_users = {}
+    for u in raw_users:
+        uid = u["user_id"]
+        if uid not in unique_users:
+            unique_users[uid] = u
+        elif u.get("vip", False): # যদি ডুপ্লিকেটের মধ্যে কেউ VIP থাকে, তাকে প্রায়োরিটি দিবে
+            unique_users[uid] = u
+            
+    users = list(unique_users.values())
     active_users = [u for u in users if u.get("is_active", True)]
     
     return web.json_response({
@@ -154,7 +163,7 @@ async def api_broadcast(request):
                 await db.update_user_status(u['user_id'], True)
                 await asyncio.sleep(0.05)
             except:
-                await db.update_user_status(u['user_id'], False) # যদি ইউজার বট ব্লক করে দেয়
+                await db.update_user_status(u['user_id'], False)
     
     return web.json_response({"status": "ok"}, headers=cors_headers())
 
