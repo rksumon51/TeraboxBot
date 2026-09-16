@@ -8,12 +8,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Table Styling for Users */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; color: var(--text-main); }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 14px; }
         th { background: #f8fafc; font-weight: 600; }
-        .vip-btn { padding: 5px 10px; border-radius: 5px; cursor: pointer; border: none; font-size: 12px; font-weight: bold; }
-        .vip-active { background: #f59e0b; color: white; }
+        .vip-btn { padding: 6px 12px; border-radius: 6px; cursor: pointer; border: none; font-size: 12px; font-weight: bold; transition: 0.3s; }
+        .vip-active { background: #f59e0b; color: white; box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3); }
         .vip-inactive { background: #e2e8f0; color: #475569; }
         .status-dot { height: 10px; width: 10px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .status-dead { background-color: #ef4444; }
@@ -61,7 +60,7 @@
                 </div>
             </div>
 
-            <!-- 👥 USERS TAB (VIP System) -->
+            <!-- 👥 USERS TAB -->
             <div id="view-users" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header">
@@ -77,7 +76,7 @@
                 </div>
             </div>
 
-            <!-- 👑 ADMINS TAB -->
+            <!-- 👑 ADMINS TAB (New Premium Buttons) -->
             <div id="view-admins" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header">
@@ -88,16 +87,22 @@
                         <label>User ID</label>
                         <input type="number" id="adminId" placeholder="Enter Telegram User ID">
                     </div>
+                    
+                    <!-- 🔴 New Custom Role Selector Buttons -->
                     <div class="input-group">
-                        <label>Role</label>
-                        <select id="adminRole" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px;">
-                            <option value="Manager">Manager</option>
-                            <option value="Co-Owner">Co-Owner</option>
-                        </select>
+                        <label>Select Role</label>
+                        <div class="role-selector">
+                            <input type="radio" id="roleManager" name="adminRole" value="Manager" checked>
+                            <label for="roleManager" class="role-btn">👤 Manager</label>
+                            
+                            <input type="radio" id="roleCoOwner" name="adminRole" value="Co-Owner">
+                            <label for="roleCoOwner" class="role-btn">👑 Co-Owner</label>
+                        </div>
                     </div>
+
                     <button onclick="addAdmin()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Add Admin</button>
                     
-                    <h4 style="margin-top: 20px;">Current Admins</h4>
+                    <h4 style="margin-top: 25px;">Current Admins</h4>
                     <ul id="adminList" class="channel-list"></ul>
                 </div>
             </div>
@@ -122,7 +127,7 @@
                 </div>
             </div>
 
-            <!-- 📢 BROADCAST TAB (Advanced) -->
+            <!-- 📢 BROADCAST TAB -->
             <div id="view-broadcast" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header">
