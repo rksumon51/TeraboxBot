@@ -1,16 +1,59 @@
-const tg = window.Telegram.WebApp;
-tg.expand(); // টেলিগ্রামের ফুল স্ক্রিন মোড অন করা
+const tg = window.Telegram.WebApp; 
+tg.expand();
 
-function addAdmin() {
-    const id = document.getElementById('new-admin-id').value;
-    const role = document.getElementById('new-admin-role').value;
+// URL থেকে Railway-এর ব্যাকএন্ড লিংক নেওয়া
+const params = new URLSearchParams(window.location.search);
+const API_BASE = params.get('api') || "";
+
+async function loadData() {
+    if(!API_BASE) return;
+    const res = await fetch(`${API_BASE}/api/stats`);
+    const data = await res.json();
     
-    if(!id) {
-        tg.showAlert("⚠️ অনুগ্রহ করে একটি টেলিগ্রাম আইডি দিন!");
-        return;
-    }
+    document.getElementById('userCount').innerText = data.users;
     
-    // (এখানে পাইথন সার্ভারে রিকোয়েস্ট পাঠানোর API কল বসবে)
-    tg.showAlert(`✅ সফল! ${id} কে ${role} হিসেবে সেট করা হয়েছে।`);
-    document.getElementById('new-admin-id').value = "";
+    const list = document.getElementById('subList');
+    list.innerHTML = "";
+    data.subs.forEach(sub => {
+        list.innerHTML += `<li>${sub.id} <button onclick="delSub('${sub.id}')">❌</button></li>`;
+    });
 }
+
+async function addSub() {
+    const id = document.getElementById('chId').value;
+    const url = document.getElementById('chUrl').value;
+    if(!id || !url) return alert("Please fill both fields");
+    
+    tg.MainButton.text = "Saving..."; tg.MainButton.show();
+    await fetch(`${API_BASE}/api/add_sub`, {
+        method: 'POST', body: JSON.stringify({channel_id: id, channel_url: url}), headers: {'Content-Type': 'application/json'}
+    });
+    tg.MainButton.hide();
+    loadData(); // রিলোড লিস্ট
+}
+
+async function delSub(id) {
+    if(!confirm(`Delete ${id}?`)) return;
+    await fetch(`${API_BASE}/api/del_sub`, {
+        method: 'POST', body: JSON.stringify({channel_id: id}), headers: {'Content-Type': 'application/json'}
+    });
+    loadData();
+}
+
+async function sendBroadcast() {
+    const msg = document.getElementById('bMsg').value;
+    if(!msg) return alert("Message is empty");
+    
+    if(confirm("Send to all users?")) {
+        tg.MainButton.text = "Sending..."; tg.MainButton.show();
+        await fetch(`${API_BASE}/api/broadcast`, {
+            method: 'POST', body: JSON.stringify({message: msg}), headers: {'Content-Type': 'application/json'}
+        });
+        alert("Broadcast Sent!");
+        tg.MainButton.hide();
+        document.getElementById('bMsg').value = "";
+    }
+}
+
+// পেজ ওপেন হওয়ার সাথে সাথে ডাটা লোড করবে
+loadData();
