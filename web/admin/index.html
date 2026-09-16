@@ -16,6 +16,8 @@
         .vip-inactive { background: #e2e8f0; color: #475569; }
         .status-dot { height: 10px; width: 10px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .status-dead { background-color: #ef4444; }
+        .test-btn { background: #dbeafe; color: #2563eb; padding: 5px 10px; border-radius: 6px; cursor: pointer; border: none; font-size: 12px; font-weight: bold; margin-right: 5px;}
+        .api-url-text { word-break: break-all; font-size: 13px; color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -30,9 +32,12 @@
                 <li id="nav-users" onclick="switchTab('users')"><i class="fa-solid fa-users"></i> Manage Users</li>
                 <li id="nav-admins" onclick="switchTab('admins')"><i class="fa-solid fa-user-tie"></i> Managers/Admins</li>
                 <li id="nav-forcesub" onclick="switchTab('forcesub')"><i class="fa-solid fa-shield-halved"></i> Force Subscribe</li>
+                
+                <!-- 🔴 API Manager -->
+                <li id="nav-apimanager" onclick="switchTab('apimanager')"><i class="fa-solid fa-server"></i> API Manager</li>
+                
                 <li id="nav-helpsettings" onclick="switchTab('helpsettings')"><i class="fa-solid fa-headset"></i> Help Settings</li>
                 <li id="nav-plansettings" onclick="switchTab('plansettings')"><i class="fa-solid fa-gem"></i> Subscriptions</li>
-                <!-- 🔴 পেমেন্ট মেথড সেটিং -->
                 <li id="nav-payment" onclick="switchTab('payment')"><i class="fa-solid fa-wallet"></i> Payment Methods</li>
                 <li id="nav-broadcast" onclick="switchTab('broadcast')"><i class="fa-solid fa-bullhorn"></i> Broadcast</li>
             </ul>
@@ -66,14 +71,12 @@
             <div id="view-admins" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header"><div class="icon-box"><i class="fa-solid fa-user-tie"></i></div><div><h3>Manager & Admin Option</h3></div></div>
-                    <div class="input-group"><label>User ID</label><input type="number" id="adminId" placeholder="Enter Telegram User ID"></div>
+                    <div class="input-group"><label>User ID</label><input type="number" id="adminId"></div>
                     <div class="input-group">
                         <label>Select Role</label>
                         <div class="role-selector">
-                            <input type="radio" id="roleManager" name="adminRole" value="Manager" checked>
-                            <label for="roleManager" class="role-btn">👤 Manager</label>
-                            <input type="radio" id="roleCoOwner" name="adminRole" value="Co-Owner">
-                            <label for="roleCoOwner" class="role-btn">👑 Co-Owner</label>
+                            <input type="radio" id="roleManager" name="adminRole" value="Manager" checked><label for="roleManager" class="role-btn">👤 Manager</label>
+                            <input type="radio" id="roleCoOwner" name="adminRole" value="Co-Owner"><label for="roleCoOwner" class="role-btn">👑 Co-Owner</label>
                         </div>
                     </div>
                     <button onclick="addAdmin()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Add Admin</button>
@@ -91,41 +94,57 @@
                 </div>
             </div>
 
+            <!-- 🔴 API MANAGER TAB -->
+            <div id="view-apimanager" class="view-section" style="display: none;">
+                <div class="manage-card">
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-server"></i></div><div><h3>API Manager</h3><p>Add unlimited APIs for Download & Stream.</p></div></div>
+                    
+                    <h4 style="color: var(--primary);">📥 Download APIs</h4>
+                    <div class="input-group" style="display:flex; gap:10px;">
+                        <input type="text" id="dlApiUrl" placeholder="https://api.example.com/tera?url=">
+                        <button onclick="addApi('download_apis')" class="btn-primary">Add</button>
+                    </div>
+                    <ul id="dlApiList" class="channel-list" style="margin-bottom: 25px;"></ul>
+
+                    <h4 style="color: var(--primary);">▶️ Stream APIs</h4>
+                    <div class="input-group" style="display:flex; gap:10px;">
+                        <input type="text" id="stApiUrl" placeholder="https://api.example.com/tera?url=">
+                        <button onclick="addApi('stream_apis')" class="btn-primary">Add</button>
+                    </div>
+                    <ul id="stApiList" class="channel-list"></ul>
+                </div>
+            </div>
+
             <div id="view-helpsettings" class="view-section" style="display: none;">
                 <div class="manage-card">
-                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-headset"></i></div><div><h3>Help Settings</h3><p>Manage support links (leave empty to hide).</p></div></div>
-                    <div class="input-group"><label>Support Email</label><input type="text" id="helpEmail" placeholder="support@domain.com"></div>
-                    <div class="input-group"><label>Facebook Profile/Page</label><input type="text" id="helpFb" placeholder="https://facebook.com/..."></div>
-                    <div class="input-group"><label>Telegram Contact/Username</label><input type="text" id="helpTg" placeholder="@username or link"></div>
-                    <div class="input-group"><label>WhatsApp Number/Link</label><input type="text" id="helpWa" placeholder="+8801..."></div>
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-headset"></i></div><div><h3>Help Settings</h3></div></div>
+                    <div class="input-group"><label>Support Email</label><input type="text" id="helpEmail"></div>
+                    <div class="input-group"><label>Facebook Profile/Page</label><input type="text" id="helpFb"></div>
+                    <div class="input-group"><label>Telegram Contact/Username</label><input type="text" id="helpTg"></div>
+                    <div class="input-group"><label>WhatsApp Number/Link</label><input type="text" id="helpWa"></div>
                     <button onclick="saveHelpSettings()" class="btn-primary w-100"><i class="fa-solid fa-save"></i> Save Links</button>
                 </div>
             </div>
 
             <div id="view-plansettings" class="view-section" style="display: none;">
                 <div class="manage-card">
-                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-gem"></i></div><div><h3>Subscription Plans</h3><p>Create completely custom premium plans.</p></div></div>
-                    
-                    <div class="input-group"><label>Plan Name (e.g. VIP Member)</label><input type="text" id="pName" placeholder="Enter Plan Name"></div>
-                    <div class="input-group"><label>Duration (e.g. 1 Minute, 1 Day, Lifetime)</label><input type="text" id="pDuration" placeholder="Enter Duration"></div>
-                    <div class="input-group"><label>Price (e.g. 50 BDT, Free, $5)</label><input type="text" id="pPrice" placeholder="Enter Price"></div>
-                    
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-gem"></i></div><div><h3>Subscription Plans</h3></div></div>
+                    <div class="input-group"><label>Plan Name</label><input type="text" id="pName"></div>
+                    <div class="input-group"><label>Duration</label><input type="text" id="pDuration"></div>
+                    <div class="input-group"><label>Price</label><input type="text" id="pPrice"></div>
                     <button onclick="addPlan()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Create Plan</button>
-                    
-                    <h4 style="margin-top: 25px; color: var(--primary);">Active Plans in Bot</h4>
-                    <ul id="planList" class="channel-list"></ul>
+                    <h4 style="margin-top: 25px; color: var(--primary);">Active Plans</h4><ul id="planList" class="channel-list"></ul>
                 </div>
             </div>
 
-            <!-- 💳 PAYMENT METHODS TAB -->
             <div id="view-payment" class="view-section" style="display: none;">
                 <div class="manage-card">
-                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-wallet"></i></div><div><h3>Payment Gateways</h3><p>Add numbers for payment. Leave empty to hide.</p></div></div>
-                    <div class="input-group"><label>🟣 bKash Number</label><input type="text" id="payBkash" placeholder="e.g. 017XXXXXX (Personal)"></div>
-                    <div class="input-group"><label>🟠 Nagad Number</label><input type="text" id="payNagad" placeholder="e.g. 019XXXXXX (Personal)"></div>
-                    <div class="input-group"><label>🚀 Rocket Number</label><input type="text" id="payRocket" placeholder="e.g. 018XXXXXX"></div>
-                    <div class="input-group"><label>🪙 Crypto Address (USDT/TRX)</label><input type="text" id="payCrypto" placeholder="Enter Wallet Address"></div>
-                    <button onclick="savePaymentSettings()" class="btn-primary w-100"><i class="fa-solid fa-save"></i> Save Payment Methods</button>
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-wallet"></i></div><div><h3>Payment Gateways</h3></div></div>
+                    <div class="input-group"><label>🟣 bKash Number</label><input type="text" id="payBkash"></div>
+                    <div class="input-group"><label>🟠 Nagad Number</label><input type="text" id="payNagad"></div>
+                    <div class="input-group"><label>🚀 Rocket Number</label><input type="text" id="payRocket"></div>
+                    <div class="input-group"><label>🪙 Crypto Address (USDT/TRX)</label><input type="text" id="payCrypto"></div>
+                    <button onclick="savePaymentSettings()" class="btn-primary w-100"><i class="fa-solid fa-save"></i> Save Methods</button>
                 </div>
             </div>
 
@@ -135,20 +154,16 @@
                     <div class="input-group">
                         <label>Target Audience</label>
                         <div class="role-selector">
-                            <input type="radio" id="bAll" name="bType" value="all" checked onchange="toggleSpecificInput()">
-                            <label for="bAll" class="role-btn">🌍 All Users</label>
-                            <input type="radio" id="bVip" name="bType" value="vip" onchange="toggleSpecificInput()">
-                            <label for="bVip" class="role-btn">⭐ VIPs</label>
-                            <input type="radio" id="bSpecific" name="bType" value="specific" onchange="toggleSpecificInput()">
-                            <label for="bSpecific" class="role-btn">🎯 Target ID</label>
+                            <input type="radio" id="bAll" name="bType" value="all" checked onchange="toggleSpecificInput()"><label for="bAll" class="role-btn">🌍 All</label>
+                            <input type="radio" id="bVip" name="bType" value="vip" onchange="toggleSpecificInput()"><label for="bVip" class="role-btn">⭐ VIPs</label>
+                            <input type="radio" id="bSpecific" name="bType" value="specific" onchange="toggleSpecificInput()"><label for="bSpecific" class="role-btn">🎯 Target</label>
                         </div>
                     </div>
-                    <div class="input-group" id="specificIdDiv" style="display: none;"><label>Enter Specific User ID</label><input type="number" id="bTargetId"></div>
+                    <div class="input-group" id="specificIdDiv" style="display: none;"><label>Specific User ID</label><input type="number" id="bTargetId"></div>
                     <div class="input-group mt-3"><label>Message Text</label><textarea id="bMsg" rows="6"></textarea></div>
-                    <button onclick="sendBroadcast()" class="btn-purple w-100"><i class="fa-solid fa-paper-plane"></i> Send Message</button>
+                    <button onclick="sendBroadcast()" class="btn-purple w-100"><i class="fa-solid fa-paper-plane"></i> Send</button>
                 </div>
             </div>
-
         </main>
     </div>
     <script src="script.js"></script>
