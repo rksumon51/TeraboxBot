@@ -43,7 +43,7 @@ async def send_welcome(message: types.Message):
     await db.get_user(message.from_user.id)
     missing = await get_missing_channels(message.from_user.id)
     if missing: return await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=await fsub_markup(missing), parse_mode=ParseMode.HTML)
-    await message.answer("<b>Send Me TeraBox Links !</b>\n\nI will download or stream it for you instantly. 🚀", reply_markup=get_main_menu(), parse_mode=ParseMode.HTML)
+    await message.answer("<b>Send Me TeraBox Links !</b>\n\nI will generate high-speed Stream & Download links for you instantly. 🚀", reply_markup=get_main_menu(), parse_mode=ParseMode.HTML)
 
 @dp.callback_query(F.data == "verify_join")
 async def verify_join_callback(call: types.CallbackQuery):
@@ -121,39 +121,38 @@ async def refer_handler(message: types.Message):
     ref_link = f"https://t.me/{bot_info.username}?start={message.from_user.id}"
     await message.answer(f"<b>🎁 Refer & Earn</b>\n\nShare this link with your friends:\n<code>{ref_link}</code>", parse_mode=ParseMode.HTML)
 
+# 🔴 SMART LINK GENERATOR LOGIC (No Downloading!)
 @dp.message(F.text.contains("terabox"))
 async def handle_link(message: types.Message):
     missing = await get_missing_channels(message.from_user.id)
     if missing: return await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=await fsub_markup(missing), parse_mode=ParseMode.HTML)
     
-    msg = await message.answer("⏳ Wait 2-4 Seconds...", reply_markup=get_main_menu())
+    msg = await message.answer("⏳ <b>Generating Links...</b>", parse_mode=ParseMode.HTML)
     
+    # API থেকে লিংক বের করা
     link, size, title = await api.get_terabox_direct_link(message.text, request_type="download")
-    
     if not link:
         link, size, title = await api.get_terabox_direct_link(message.text, request_type="stream")
-        if not link: return await msg.edit_text("❌ লিংকটি কাজ করছে না অথবা API ডাউন।")
+        if not link: return await msg.edit_text("❌ <b>লিংকটি কাজ করছে না অথবা API ডাউন।</b>", parse_mode=ParseMode.HTML)
 
     user = await db.get_user(message.from_user.id)
     is_vip = user.get("vip", False)
     
-    if not is_vip and size and size > 50 * 1024 * 1024:
-        player_url = f"{config.WEBAPP_URL}/player/player.html?link={link}&title={title}"
-        markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="▶️ Watch & Download", web_app=WebAppInfo(url=player_url))]])
-        return await msg.edit_text(f"📁 <b>{title}</b>\n\n⚠️ File is too large for Telegram (Max 50MB for Normal Users).\nWatch or Download directly below:", reply_markup=markup, parse_mode=ParseMode.HTML)
+    # সাইজ ক্যালকুলেশন (যদি API থেকে পাওয়া যায়)
+    size_text = f"{size / (1024*1024):.2f} MB" if size and size > 0 else "Unknown"
+
+    # Web App Player URL তৈরি করা
+    player_url = f"{config.WEBAPP_URL}/player/player.html?link={link}&title={title}"
     
-    await msg.edit_text("⏳ Downloading...")
-    file_path = f"{message.from_user.id}.mp4"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(link) as resp:
-                with open(file_path, 'wb') as f: f.write(await resp.read())
-                await bot.send_video(message.chat.id, FSInputFile(file_path), caption=title)
-                os.remove(file_path)
-                await msg.delete()
-    except:
-        await msg.edit_text("❌ সমস্যা হয়েছে।")
-        if os.path.exists(file_path): os.remove(file_path)
+    # 🔴 ২টা বাটন তৈরি (Watch Online & Download Now)
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="▶️ Watch Online", web_app=WebAppInfo(url=player_url))],
+        [InlineKeyboardButton(text="📥 Download Now", url=link)]
+    ])
+    
+    text = f"📁 <b>{title}</b>\n\n⚖️ <b>Size:</b> {size_text}\n\n✅ <i>Links generated successfully! Choose an option below:</i>"
+    
+    await msg.edit_text(text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
 def cors_headers(): return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
 async def options_handler(request): return web.Response(headers=cors_headers())
@@ -197,7 +196,6 @@ async def api_del_custom_api(request):
     await db.del_api(data['api_type'], data['api_url'])
     return web.json_response({"status": "ok"}, headers=cors_headers())
 
-# 🔴 Updated Smart API Test Logic (POST + GET)
 async def api_test_custom_api(request):
     data = await request.json()
     api_url = data['api_url']
@@ -205,24 +203,17 @@ async def api_test_custom_api(request):
     
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-            # 1. Try POST first
             clean_api = api_url.split('?url=')[0]
             try:
                 async with session.post(clean_api, json={"url": test_tb_url}, headers={"User-Agent": "Mozilla/5.0"}) as resp:
-                    if resp.status in [200, 400, 403, 404, 500]: # If it responds with anything, it's alive
-                        return web.json_response({"status": "Active"}, headers=cors_headers())
+                    if resp.status in [200, 400, 403, 404, 500]: return web.json_response({"status": "Active"}, headers=cors_headers())
             except: pass
-            
-            # 2. Try GET if POST fails
             test_url = f"{api_url}{test_tb_url}" if api_url.endswith('=') else f"{api_url}?url={test_tb_url}"
             try:
                 async with session.get(test_url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
-                    if resp.status in [200, 400, 403, 404, 500]:
-                        return web.json_response({"status": "Active"}, headers=cors_headers())
+                    if resp.status in [200, 400, 403, 404, 500]: return web.json_response({"status": "Active"}, headers=cors_headers())
             except: pass
-            
     except Exception: pass
-    
     return web.json_response({"status": "Dead"}, headers=cors_headers())
 
 async def api_add_plan(request):
