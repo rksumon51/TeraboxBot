@@ -34,8 +34,7 @@ async def get_missing_channels(user_id):
 
 async def fsub_markup(missing_channels):
     markup = InlineKeyboardMarkup(inline_keyboard=[])
-    for ch in missing_channels:
-        markup.inline_keyboard.append([InlineKeyboardButton(text=f"❗ Join {ch['channel_id']} ✅", url=ch['channel_url'])])
+    for ch in missing_channels: markup.inline_keyboard.append([InlineKeyboardButton(text=f"❗ Join {ch['channel_id']} ✅", url=ch['channel_url'])])
     markup.inline_keyboard.append([InlineKeyboardButton(text="✅ Joined", callback_data="verify_join")])
     return markup
 
@@ -43,8 +42,7 @@ async def fsub_markup(missing_channels):
 async def send_welcome(message: types.Message):
     await db.get_user(message.from_user.id)
     missing = await get_missing_channels(message.from_user.id)
-    if missing:
-        return await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=await fsub_markup(missing), parse_mode=ParseMode.HTML)
+    if missing: return await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=await fsub_markup(missing), parse_mode=ParseMode.HTML)
     await message.answer("<b>Send Me TeraBox Links !</b>\n\nI will download or stream it for you instantly. 🚀", reply_markup=get_main_menu(), parse_mode=ParseMode.HTML)
 
 @dp.callback_query(F.data == "verify_join")
@@ -69,8 +67,7 @@ async def admin_panel(message: types.Message):
 async def my_profile_handler(message: types.Message):
     user = await db.get_user(message.from_user.id)
     vip_status = "🌟 VIP Member" if user.get("vip", False) else "👤 Normal User"
-    text = f"<b>Your Profile Information:</b>\n\n🆔 <b>User ID:</b> <code>{message.from_user.id}</code>\n🔰 <b>Position:</b> {vip_status}"
-    await message.answer(text, parse_mode=ParseMode.HTML)
+    await message.answer(f"<b>Your Profile Information:</b>\n\n🆔 <b>User ID:</b> <code>{message.from_user.id}</code>\n🔰 <b>Position:</b> {vip_status}", parse_mode=ParseMode.HTML)
 
 @dp.message(F.text == "❓ Help")
 async def help_handler(message: types.Message):
@@ -84,17 +81,12 @@ async def help_handler(message: types.Message):
         text += "\n<i>No support channels configured yet.</i>"
     await message.answer(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
-# === 🔴 Dynamic Plan Buttons & Payment Logic ===
 @dp.message(F.text == "💎 Plan")
 async def plan_handler(message: types.Message):
     plans = await db.get_all_plans()
-    if not plans:
-        return await message.answer("<b>💎 VIP Subscription Plans</b>\n\nCurrently, there are no premium plans available.", parse_mode=ParseMode.HTML)
-    
+    if not plans: return await message.answer("<b>💎 VIP Subscription Plans</b>\n\nCurrently, there are no premium plans available.", parse_mode=ParseMode.HTML)
     markup = InlineKeyboardMarkup(inline_keyboard=[])
-    for p in plans:
-        markup.inline_keyboard.append([InlineKeyboardButton(text=f"💎 {p['name']} - {p['price']}", callback_data=f"buyplan_{p['plan_id']}")])
-        
+    for p in plans: markup.inline_keyboard.append([InlineKeyboardButton(text=f"💎 {p['name']} - {p['price']}", callback_data=f"buyplan_{p['plan_id']}")])
     await message.answer("<b>💎 VIP Subscription Plans</b>\n\nSelect a plan from below to see payment details:", reply_markup=markup, parse_mode=ParseMode.HTML)
 
 @dp.callback_query(F.data.startswith("buyplan_"))
@@ -102,7 +94,6 @@ async def buy_plan_callback(call: types.CallbackQuery):
     plan_id = call.data.split("buyplan_")[1]
     plans = await db.get_all_plans()
     selected_plan = next((p for p in plans if p['plan_id'] == plan_id), None)
-    
     if not selected_plan: return await call.answer("Plan not found!", show_alert=True)
     
     settings = await db.get_settings()
@@ -111,15 +102,9 @@ async def buy_plan_callback(call: types.CallbackQuery):
     if settings.get("pay_nagad"): pay_text += f"🟠 <b>Nagad:</b> <code>{settings['pay_nagad']}</code>\n"
     if settings.get("pay_rocket"): pay_text += f"🚀 <b>Rocket:</b> <code>{settings['pay_rocket']}</code>\n"
     if settings.get("pay_crypto"): pay_text += f"🪙 <b>Crypto:</b> <code>{settings['pay_crypto']}</code>\n"
-    
     if not pay_text: pay_text = "<i>No automated payment methods configured. Please contact admin.</i>\n"
     
-    text = (f"🛒 <b>Checkout: {selected_plan['name']}</b>\n\n"
-            f"⏳ <b>Duration:</b> {selected_plan['duration']}\n"
-            f"💰 <b>Amount to Pay:</b> {selected_plan['price']}\n\n"
-            f"💳 <b>Payment Methods:</b>\n{pay_text}\n"
-            f"⚠️ <i>After sending the payment, please send a screenshot of the transaction to the Admin for VIP activation!</i>")
-            
+    text = (f"🛒 <b>Checkout: {selected_plan['name']}</b>\n\n⏳ <b>Duration:</b> {selected_plan['duration']}\n💰 <b>Amount to Pay:</b> {selected_plan['price']}\n\n💳 <b>Payment Methods:</b>\n{pay_text}\n⚠️ <i>After sending the payment, please send a screenshot of the transaction to the Admin for VIP activation!</i>")
     markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Back to Plans", callback_data="back_to_plans")]])
     await call.message.edit_text(text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
@@ -129,7 +114,6 @@ async def back_to_plans_callback(call: types.CallbackQuery):
     markup = InlineKeyboardMarkup(inline_keyboard=[])
     for p in plans: markup.inline_keyboard.append([InlineKeyboardButton(text=f"💎 {p['name']} - {p['price']}", callback_data=f"buyplan_{p['plan_id']}")])
     await call.message.edit_text("<b>💎 VIP Subscription Plans</b>\n\nSelect a plan from below to see payment details:", reply_markup=markup, parse_mode=ParseMode.HTML)
-# ===============================================
 
 @dp.message(F.text == "🎁 Refer")
 async def refer_handler(message: types.Message):
@@ -143,26 +127,36 @@ async def handle_link(message: types.Message):
     if missing: return await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=await fsub_markup(missing), parse_mode=ParseMode.HTML)
     
     msg = await message.answer("⏳ Wait 2-4 Seconds...", reply_markup=get_main_menu())
-    link, size, title = await api.get_terabox_direct_link(message.text)
     
-    if not link: return await msg.edit_text("❌ লিংকটি কাজ করছে না।")
-    if size and size <= 50 * 1024 * 1024:
-        await msg.edit_text("⏳ Downloading...")
-        file_path = f"{message.from_user.id}.mp4"
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(link) as resp:
-                    with open(file_path, 'wb') as f: f.write(await resp.read())
-                    await bot.send_video(message.chat.id, FSInputFile(file_path), caption=title)
-                    os.remove(file_path)
-                    await msg.delete()
-        except:
-            await msg.edit_text("❌ সমস্যা হয়েছে।")
-            if os.path.exists(file_path): os.remove(file_path)
-    else:
+    # 🔴 প্রথমে ডাউনলোড API ট্রাই করবে, বড় হলে স্ট্রিমে যাবে
+    link, size, title = await api.get_terabox_direct_link(message.text, request_type="download")
+    
+    if not link:
+        # ডাউনলোড API ফেইল করলে স্ট্রিম API দিয়ে ট্রাই করবে (ডাবল ব্যাকআপ)
+        link, size, title = await api.get_terabox_direct_link(message.text, request_type="stream")
+        if not link: return await msg.edit_text("❌ লিংকটি কাজ করছে না অথবা API ডাউন।")
+
+    # যদি ইউজার VIP না হয়, তাহলে সাইজ লিমিট কাজ করবে (৫০ এমবি)
+    user = await db.get_user(message.from_user.id)
+    is_vip = user.get("vip", False)
+    
+    if not is_vip and size and size > 50 * 1024 * 1024:
         player_url = f"{config.WEBAPP_URL}/player/player.html?link={link}&title={title}"
         markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="▶️ Watch & Download", web_app=WebAppInfo(url=player_url))]])
-        await msg.edit_text(f"📁 <b>{title}</b>\n\n⚠️ File is too large. Watch below:", reply_markup=markup, parse_mode=ParseMode.HTML)
+        return await msg.edit_text(f"📁 <b>{title}</b>\n\n⚠️ File is too large for Telegram (Max 50MB for Normal Users).\nWatch or Download directly below:", reply_markup=markup, parse_mode=ParseMode.HTML)
+    
+    await msg.edit_text("⏳ Downloading...")
+    file_path = f"{message.from_user.id}.mp4"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(link) as resp:
+                with open(file_path, 'wb') as f: f.write(await resp.read())
+                await bot.send_video(message.chat.id, FSInputFile(file_path), caption=title)
+                os.remove(file_path)
+                await msg.delete()
+    except:
+        await msg.edit_text("❌ সমস্যা হয়েছে।")
+        if os.path.exists(file_path): os.remove(file_path)
 
 def cors_headers(): return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
 async def options_handler(request): return web.Response(headers=cors_headers())
@@ -190,6 +184,30 @@ async def api_get_stats(request):
         "settings": settings,
         "plans": [{"id": p["plan_id"], "name": p["name"], "duration": p["duration"], "price": p["price"]} for p in plans]
     }, headers=cors_headers())
+
+# 🔴 API Manager Endpoints
+async def api_add_custom_api(request):
+    data = await request.json()
+    await db.add_api(data['api_type'], data['api_url'])
+    return web.json_response({"status": "ok"}, headers=cors_headers())
+
+async def api_del_custom_api(request):
+    data = await request.json()
+    await db.del_api(data['api_type'], data['api_url'])
+    return web.json_response({"status": "ok"}, headers=cors_headers())
+
+async def api_test_custom_api(request):
+    data = await request.json()
+    api_url = data['api_url']
+    # Testing with a dummy terabox link
+    test_url = f"{api_url}https://terabox.com/s/1dummy" if api_url.endswith('=') else f"{api_url}?url=https://terabox.com/s/1dummy"
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+            async with session.get(test_url) as resp:
+                if resp.status in [200, 404, 500]: # Server is at least responding
+                    return web.json_response({"status": "Active"}, headers=cors_headers())
+    except: pass
+    return web.json_response({"status": "Dead"}, headers=cors_headers())
 
 async def api_update_settings(request):
     data = await request.json()
@@ -263,6 +281,9 @@ async def web_server():
     app.router.add_post('/api/update_settings', api_update_settings)
     app.router.add_post('/api/add_plan', api_add_plan) 
     app.router.add_post('/api/del_plan', api_del_plan) 
+    app.router.add_post('/api/add_api', api_add_custom_api) # 🔴 New Route
+    app.router.add_post('/api/del_api', api_del_custom_api) # 🔴 New Route
+    app.router.add_post('/api/test_api', api_test_custom_api) # 🔴 New Route
     app.router.add_post('/api/toggle_vip', api_toggle_vip)
     app.router.add_post('/api/add_admin', api_add_admin)
     app.router.add_post('/api/del_admin', api_del_admin)
