@@ -1,34 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Premium Admin Panel</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <h2>🛠️ Admin Panel</h2>
+    <div class="header">
+        <h2>🛠️ Admin Dashboard</h2>
+    </div>
     
-    <div class="card">
-        <h3>👥 Total Users: <span id="userCount">Loading...</span></h3>
-    </div>
+    <div class="container">
+        <!-- Stats Card -->
+        <div class="card premium-border">
+            <h3 class="card-title">👑 Primary Owner</h3>
+            <p>Status: 🔒 Locked in Database</p>
+            <div class="stats-box">
+                <span class="stats-icon">👥</span> Total Users: <strong id="userCount">Loading...</strong>
+            </div>
+        </div>
 
-    <div class="card">
-        <h3>➕ Add Force Sub Channel</h3>
-        <input type="text" id="chId" placeholder="Channel ID (e.g. @MyChannel)">
-        <input type="text" id="chUrl" placeholder="Channel Link (https://t.me/...)">
-        <button onclick="addSub()" class="btn-primary">Add Channel</button>
-    </div>
+        <!-- Add Admin Card -->
+        <div class="card">
+            <h3 class="card-title">➕ Add New Admin</h3>
+            <input type="number" id="adminId" class="input-field" placeholder="Enter Telegram User ID">
+            <select id="adminRole" class="input-field select-field">
+                <option value="Co-Owner">Co-Owner</option>
+                <option value="Manager">Manager</option>
+            </select>
+            <button onclick="addAdmin()" class="btn btn-primary">Add Admin</button>
+        </div>
 
-    <div class="card">
-        <h3>📋 Active Channels</h3>
-        <ul id="subList">Loading...</ul>
-    </div>
+        <!-- Add Force Sub Card -->
+        <div class="card">
+            <h3 class="card-title">📌 Add Force Sub Channel</h3>
+            <input type="text" id="chId" class="input-field" placeholder="Channel ID (e.g. @MyChannel)">
+            <input type="text" id="chUrl" class="input-field" placeholder="Channel Link (https://t.me/...)">
+            <button onclick="addSub()" class="btn btn-secondary">Add Channel</button>
+        </div>
 
-    <div class="card">
-        <h3>📢 Broadcast Message</h3>
-        <textarea id="bMsg" placeholder="Type message for all users..."></textarea>
-        <button onclick="sendBroadcast()" class="btn-danger">Send Broadcast</button>
+        <!-- Active Channels List -->
+        <div class="card">
+            <h3 class="card-title">📋 Active Channels</h3>
+            <ul id="subList" class="custom-list">Loading...</ul>
+        </div>
+
+        <!-- Broadcast Card -->
+        <div class="card">
+            <h3 class="card-title">📢 Broadcast Message</h3>
+            <textarea id="bMsg" class="input-field textarea-field" placeholder="Type message for all users..."></textarea>
+            <button onclick="sendBroadcast()" class="btn btn-danger">Send Broadcast</button>
+        </div>
     </div>
 
     <script src="script.js"></script>
