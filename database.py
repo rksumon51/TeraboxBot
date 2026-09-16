@@ -9,22 +9,17 @@ users_col = db['users']
 admins_col = db['admins']
 fsub_col = db['force_subs']
 settings_col = db['settings']
+plans_col = db['plans'] # 🔴 নতুন Plan ডাটাবেস
 
 async def init_db():
     owner = await admins_col.find_one({"user_id": config.PRIMARY_OWNER_ID})
     if not owner:
         await admins_col.insert_one({"user_id": config.PRIMARY_OWNER_ID, "role": "Primary Owner"})
     
-    # ডিফল্ট সেটিংস ইনিশিয়ালাইজ
     settings = await settings_col.find_one({"_id": "bot_settings"})
     if not settings:
         await settings_col.insert_one({
-            "_id": "bot_settings",
-            "help_email": "",
-            "help_fb": "",
-            "help_tg": "",
-            "help_wa": "",
-            "plan_text": "🔹 Normal: Free to use\n🔹 VIP: Unlimited access & fast speeds."
+            "_id": "bot_settings", "help_email": "", "help_fb": "", "help_tg": "", "help_wa": ""
         })
 
 async def get_admin_role(user_id):
@@ -55,10 +50,23 @@ async def add_fsub(channel_id, channel_url): await fsub_col.update_one({"channel
 async def remove_fsub(channel_id): await fsub_col.delete_one({"channel_id": channel_id})
 async def get_all_fsubs(): return await fsub_col.find({}).to_list(length=None)
 
-# --- Settings & Plan Database ---
 async def get_settings():
     settings = await settings_col.find_one({"_id": "bot_settings"})
     return settings or {}
 
 async def update_settings(data):
     await settings_col.update_one({"_id": "bot_settings"}, {"$set": data}, upsert=True)
+
+# --- 🔴 Plans Management ---
+async def add_plan(plan_id, name, duration, price):
+    await plans_col.update_one(
+        {"plan_id": plan_id},
+        {"$set": {"name": name, "duration": duration, "price": price}},
+        upsert=True
+    )
+
+async def remove_plan(plan_id):
+    await plans_col.delete_one({"plan_id": plan_id})
+
+async def get_all_plans():
+    return await plans_col.find({}).to_list(length=None)
