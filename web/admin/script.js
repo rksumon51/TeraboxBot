@@ -1,5 +1,5 @@
 // 🔴 আপনার Railway-এর ডোমেইন লিংকটি এখানে দিন (অবশ্যই https:// সহ এবং শেষে / ছাড়া):
-const API_BASE = "worker-production-0420.up.railway.app"; 
+const API_BASE = "https://worker-production-0420.up.railway.app"; 
 
 const tg = window.Telegram.WebApp; 
 tg.expand();
