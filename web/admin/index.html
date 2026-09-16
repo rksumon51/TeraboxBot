@@ -30,11 +30,10 @@
                 <li id="nav-users" onclick="switchTab('users')"><i class="fa-solid fa-users"></i> Manage Users</li>
                 <li id="nav-admins" onclick="switchTab('admins')"><i class="fa-solid fa-user-tie"></i> Managers/Admins</li>
                 <li id="nav-forcesub" onclick="switchTab('forcesub')"><i class="fa-solid fa-shield-halved"></i> Force Subscribe</li>
-                
-                <!-- 🔴 Help এবং Plan আলাদা করা হলো -->
                 <li id="nav-helpsettings" onclick="switchTab('helpsettings')"><i class="fa-solid fa-headset"></i> Help Settings</li>
-                <li id="nav-plansettings" onclick="switchTab('plansettings')"><i class="fa-solid fa-gem"></i> Subscription Plans</li>
-                
+                <li id="nav-plansettings" onclick="switchTab('plansettings')"><i class="fa-solid fa-gem"></i> Subscriptions</li>
+                <!-- 🔴 পেমেন্ট মেথড সেটিং -->
+                <li id="nav-payment" onclick="switchTab('payment')"><i class="fa-solid fa-wallet"></i> Payment Methods</li>
                 <li id="nav-broadcast" onclick="switchTab('broadcast')"><i class="fa-solid fa-bullhorn"></i> Broadcast</li>
             </ul>
         </aside>
@@ -47,7 +46,6 @@
                 </div>
             </header>
 
-            <!-- 🏠 HOME TAB -->
             <div id="view-home" class="view-section">
                 <div class="stats-grid">
                     <div class="stat-card blue-gradient"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-details"><p>Total Users</p><h2 id="totalUsers">0</h2></div></div>
@@ -56,7 +54,6 @@
                 </div>
             </div>
 
-            <!-- 👥 USERS TAB -->
             <div id="view-users" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header"><div class="icon-box"><i class="fa-solid fa-users"></i></div><div><h3>Users & VIP Management</h3></div></div>
@@ -66,7 +63,6 @@
                 </div>
             </div>
 
-            <!-- 👑 ADMINS TAB -->
             <div id="view-admins" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header"><div class="icon-box"><i class="fa-solid fa-user-tie"></i></div><div><h3>Manager & Admin Option</h3></div></div>
@@ -85,7 +81,6 @@
                 </div>
             </div>
 
-            <!-- 🛡️ FORCE SUB TAB -->
             <div id="view-forcesub" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header"><div class="icon-box"><i class="fa-solid fa-shield-halved"></i></div><div><h3>Force Subscribe</h3></div></div>
@@ -96,7 +91,6 @@
                 </div>
             </div>
 
-            <!-- 📞 HELP SETTINGS TAB -->
             <div id="view-helpsettings" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header"><div class="icon-box"><i class="fa-solid fa-headset"></i></div><div><h3>Help Settings</h3><p>Manage support links (leave empty to hide).</p></div></div>
@@ -108,13 +102,12 @@
                 </div>
             </div>
 
-            <!-- 💎 SUBSCRIPTION PLANS TAB (New Dynamic Creator) -->
             <div id="view-plansettings" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header"><div class="icon-box"><i class="fa-solid fa-gem"></i></div><div><h3>Subscription Plans</h3><p>Create completely custom premium plans.</p></div></div>
                     
                     <div class="input-group"><label>Plan Name (e.g. VIP Member)</label><input type="text" id="pName" placeholder="Enter Plan Name"></div>
-                    <div class="input-group"><label>Duration (e.g. 1 Day, 1 Week, 1 Month, Lifetime)</label><input type="text" id="pDuration" placeholder="Enter Duration"></div>
+                    <div class="input-group"><label>Duration (e.g. 1 Minute, 1 Day, Lifetime)</label><input type="text" id="pDuration" placeholder="Enter Duration"></div>
                     <div class="input-group"><label>Price (e.g. 50 BDT, Free, $5)</label><input type="text" id="pPrice" placeholder="Enter Price"></div>
                     
                     <button onclick="addPlan()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Create Plan</button>
@@ -124,7 +117,18 @@
                 </div>
             </div>
 
-            <!-- 📢 BROADCAST TAB -->
+            <!-- 💳 PAYMENT METHODS TAB -->
+            <div id="view-payment" class="view-section" style="display: none;">
+                <div class="manage-card">
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-wallet"></i></div><div><h3>Payment Gateways</h3><p>Add numbers for payment. Leave empty to hide.</p></div></div>
+                    <div class="input-group"><label>🟣 bKash Number</label><input type="text" id="payBkash" placeholder="e.g. 017XXXXXX (Personal)"></div>
+                    <div class="input-group"><label>🟠 Nagad Number</label><input type="text" id="payNagad" placeholder="e.g. 019XXXXXX (Personal)"></div>
+                    <div class="input-group"><label>🚀 Rocket Number</label><input type="text" id="payRocket" placeholder="e.g. 018XXXXXX"></div>
+                    <div class="input-group"><label>🪙 Crypto Address (USDT/TRX)</label><input type="text" id="payCrypto" placeholder="Enter Wallet Address"></div>
+                    <button onclick="savePaymentSettings()" class="btn-primary w-100"><i class="fa-solid fa-save"></i> Save Payment Methods</button>
+                </div>
+            </div>
+
             <div id="view-broadcast" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header"><div class="icon-box purple-bg"><i class="fa-solid fa-bullhorn"></i></div><div><h3>Advanced Broadcast</h3></div></div>
@@ -141,26 +145,6 @@
                     </div>
                     <div class="input-group" id="specificIdDiv" style="display: none;"><label>Enter Specific User ID</label><input type="number" id="bTargetId"></div>
                     <div class="input-group mt-3"><label>Message Text</label><textarea id="bMsg" rows="6"></textarea></div>
-                    <button onclick="sendBroadcast()" class="btn-purple w-100"><i class="fa-solid fa-paper-plane"></i> Send Message</button>
-                </div>
-            </div>
-
-        </main>
-    </div>
-    <script src="script.js"></script>
-</body>
-</html>ue="specific" onchange="toggleSpecificInput()">
-                            <label for="bSpecific" class="role-btn">🎯 Target ID</label>
-                        </div>
-                    </div>
-                    <div class="input-group" id="specificIdDiv" style="display: none;">
-                        <label>Enter Specific User ID</label>
-                        <input type="number" id="bTargetId" placeholder="e.g. 8110034101">
-                    </div>
-                    <div class="input-group mt-3">
-                        <label>Message Text</label>
-                        <textarea id="bMsg" rows="6" placeholder="Type your broadcast message..."></textarea>
-                    </div>
                     <button onclick="sendBroadcast()" class="btn-purple w-100"><i class="fa-solid fa-paper-plane"></i> Send Message</button>
                 </div>
             </div>
