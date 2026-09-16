@@ -2,3 +2,4 @@ aiogram
 motor
 aiohttp
 curl_cffi
+python-dotenv
