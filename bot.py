@@ -128,15 +128,12 @@ async def handle_link(message: types.Message):
     
     msg = await message.answer("⏳ Wait 2-4 Seconds...", reply_markup=get_main_menu())
     
-    # 🔴 প্রথমে ডাউনলোড API ট্রাই করবে, বড় হলে স্ট্রিমে যাবে
     link, size, title = await api.get_terabox_direct_link(message.text, request_type="download")
     
     if not link:
-        # ডাউনলোড API ফেইল করলে স্ট্রিম API দিয়ে ট্রাই করবে (ডাবল ব্যাকআপ)
         link, size, title = await api.get_terabox_direct_link(message.text, request_type="stream")
         if not link: return await msg.edit_text("❌ লিংকটি কাজ করছে না অথবা API ডাউন।")
 
-    # যদি ইউজার VIP না হয়, তাহলে সাইজ লিমিট কাজ করবে (৫০ এমবি)
     user = await db.get_user(message.from_user.id)
     is_vip = user.get("vip", False)
     
@@ -185,7 +182,11 @@ async def api_get_stats(request):
         "plans": [{"id": p["plan_id"], "name": p["name"], "duration": p["duration"], "price": p["price"]} for p in plans]
     }, headers=cors_headers())
 
-# 🔴 API Manager Endpoints
+async def api_update_settings(request):
+    data = await request.json()
+    await db.update_settings(data)
+    return web.json_response({"status": "ok"}, headers=cors_headers())
+
 async def api_add_custom_api(request):
     data = await request.json()
     await db.add_api(data['api_type'], data['api_url'])
@@ -196,23 +197,33 @@ async def api_del_custom_api(request):
     await db.del_api(data['api_type'], data['api_url'])
     return web.json_response({"status": "ok"}, headers=cors_headers())
 
+# 🔴 Updated Smart API Test Logic (POST + GET)
 async def api_test_custom_api(request):
     data = await request.json()
     api_url = data['api_url']
-    # Testing with a dummy terabox link
-    test_url = f"{api_url}https://terabox.com/s/1dummy" if api_url.endswith('=') else f"{api_url}?url=https://terabox.com/s/1dummy"
+    test_tb_url = "https://1024terabox.com/s/1dummy"
+    
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-            async with session.get(test_url) as resp:
-                if resp.status in [200, 404, 500]: # Server is at least responding
-                    return web.json_response({"status": "Active"}, headers=cors_headers())
-    except: pass
+            # 1. Try POST first
+            clean_api = api_url.split('?url=')[0]
+            try:
+                async with session.post(clean_api, json={"url": test_tb_url}, headers={"User-Agent": "Mozilla/5.0"}) as resp:
+                    if resp.status in [200, 400, 403, 404, 500]: # If it responds with anything, it's alive
+                        return web.json_response({"status": "Active"}, headers=cors_headers())
+            except: pass
+            
+            # 2. Try GET if POST fails
+            test_url = f"{api_url}{test_tb_url}" if api_url.endswith('=') else f"{api_url}?url={test_tb_url}"
+            try:
+                async with session.get(test_url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
+                    if resp.status in [200, 400, 403, 404, 500]:
+                        return web.json_response({"status": "Active"}, headers=cors_headers())
+            except: pass
+            
+    except Exception: pass
+    
     return web.json_response({"status": "Dead"}, headers=cors_headers())
-
-async def api_update_settings(request):
-    data = await request.json()
-    await db.update_settings(data)
-    return web.json_response({"status": "ok"}, headers=cors_headers())
 
 async def api_add_plan(request):
     data = await request.json()
@@ -281,9 +292,9 @@ async def web_server():
     app.router.add_post('/api/update_settings', api_update_settings)
     app.router.add_post('/api/add_plan', api_add_plan) 
     app.router.add_post('/api/del_plan', api_del_plan) 
-    app.router.add_post('/api/add_api', api_add_custom_api) # 🔴 New Route
-    app.router.add_post('/api/del_api', api_del_custom_api) # 🔴 New Route
-    app.router.add_post('/api/test_api', api_test_custom_api) # 🔴 New Route
+    app.router.add_post('/api/add_api', api_add_custom_api)
+    app.router.add_post('/api/del_api', api_del_custom_api)
+    app.router.add_post('/api/test_api', api_test_custom_api)
     app.router.add_post('/api/toggle_vip', api_toggle_vip)
     app.router.add_post('/api/add_admin', api_add_admin)
     app.router.add_post('/api/del_admin', api_del_admin)
