@@ -28,14 +28,14 @@ async function loadData() {
         
         // Stats
         document.getElementById('totalUsers').innerText = data.total_users;
-        document.getElementById('activeUsers').innerText = data.active_users; // রিয়েল অ্যাক্টিভ ইউজার
+        document.getElementById('activeUsers').innerText = data.active_users;
         document.getElementById('subCount').innerText = data.subs.length;
         
         // Users & VIP Table
         const tbody = document.getElementById('usersTableBody');
         tbody.innerHTML = "";
         data.users_list.forEach(u => {
-            const statusHtml = u.active ? `<span class="status-dot"></span> Active` : `<span class="status-dot status-dead"></span> Blocked/Dead`;
+            const statusHtml = u.active ? `<span class="status-dot"></span> Active` : `<span class="status-dot status-dead"></span> Blocked`;
             const vipClass = u.vip ? "vip-active" : "vip-inactive";
             const vipText = u.vip ? "⭐ VIP Member" : "Make VIP";
             tbody.innerHTML += `<tr>
@@ -64,7 +64,7 @@ async function loadData() {
                 <button class="delete-btn" onclick="delSub('${sub.id}')"><i class="fa-solid fa-trash"></i></button></li>`;
         });
     } catch (e) {
-        tg.showAlert("API Error! Railway লিংকটি সঠিক আছে কিনা চেক করুন।");
+        tg.showAlert("API Error! Railway লিংকটি চেক করুন।");
     }
 }
 
@@ -75,7 +75,9 @@ async function toggleVIP(userId, status) {
 
 async function addAdmin() {
     const id = document.getElementById('adminId').value;
-    const role = document.getElementById('adminRole').value;
+    // 🔴 পপআপের বদলে এখন সিলেক্ট করা বাটন থেকে ডাটা নিবে
+    const role = document.querySelector('input[name="adminRole"]:checked').value; 
+    
     if(!id) return tg.showAlert("Enter Admin User ID!");
     await fetch(`${API_BASE}/api/add_admin`, { method: 'POST', body: JSON.stringify({user_id: id, role: role}), headers: {'Content-Type': 'application/json'} });
     document.getElementById('adminId').value = "";
@@ -121,9 +123,7 @@ async function sendBroadcast() {
         if(confirmed) {
             tg.MainButton.text = "Sending..."; tg.MainButton.show();
             await fetch(`${API_BASE}/api/broadcast`, {
-                method: 'POST', 
-                body: JSON.stringify({message: msg, type: type, target_id: targetId}), 
-                headers: {'Content-Type': 'application/json'}
+                method: 'POST', body: JSON.stringify({message: msg, type: type, target_id: targetId}), headers: {'Content-Type': 'application/json'}
             });
             tg.showAlert("✅ Message Sent!");
             tg.MainButton.hide();
