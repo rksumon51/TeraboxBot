@@ -84,7 +84,6 @@ async def help_handler(message: types.Message):
         text += "\n<i>No support channels configured yet.</i>"
     await message.answer(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
-# --- 🔴 Dynamic Plan Presenter ---
 @dp.message(F.text == "💎 Plan")
 async def plan_handler(message: types.Message):
     plans = await db.get_all_plans()
@@ -229,37 +228,8 @@ async def web_server():
     app.router.add_options('/api/{tail:.*}', options_handler)
     app.router.add_get('/api/stats', api_get_stats)
     app.router.add_post('/api/update_settings', api_update_settings)
-    app.router.add_post('/api/add_plan', api_add_plan) # New API
-    app.router.add_post('/api/del_plan', api_del_plan) # New API
-    app.router.add_post('/api/toggle_vip', api_toggle_vip)
-    app.router.add_post('/api/add_admin', api_add_admin)
-    app.router.add_post('/api/del_admin', api_del_admin)
-    app.router.add_post('/api/add_sub', api_add_sub)
-    app.router.add_post('/api/del_sub', api_del_sub)
-    app.router.add_post('/api/broadcast', api_broadcast)
-    
-    runner = web.AppRunner(app)
-    await runner.setup()
-    await web.TCPSite(runner, '0.0.0.0', int(os.environ.get("PORT", 8080))).start()
-
-async def main():
-    await db.init_db()
-    await bot.delete_webhook(drop_pending_updates=True) 
-    await asyncio.gather(dp.start_polling(bot), web_server())
-
-if __name__ == "__main__":
-    asyncio.run(main())atus(u['user_id'], True)
-                await asyncio.sleep(0.05)
-            except:
-                await db.update_user_status(u['user_id'], False)
-    
-    return web.json_response({"status": "ok"}, headers=cors_headers())
-
-async def web_server():
-    app = web.Application()
-    app.router.add_options('/api/{tail:.*}', options_handler)
-    app.router.add_get('/api/stats', api_get_stats)
-    app.router.add_post('/api/update_settings', api_update_settings)
+    app.router.add_post('/api/add_plan', api_add_plan) 
+    app.router.add_post('/api/del_plan', api_del_plan) 
     app.router.add_post('/api/toggle_vip', api_toggle_vip)
     app.router.add_post('/api/add_admin', api_add_admin)
     app.router.add_post('/api/del_admin', api_del_admin)
