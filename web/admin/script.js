@@ -75,7 +75,6 @@ async function toggleVIP(userId, status) {
 
 async function addAdmin() {
     const id = document.getElementById('adminId').value;
-    // 🔴 পপআপের বদলে এখন সিলেক্ট করা বাটন থেকে ডাটা নিবে
     const role = document.querySelector('input[name="adminRole"]:checked').value; 
     
     if(!id) return tg.showAlert("Enter Admin User ID!");
@@ -107,13 +106,14 @@ async function delSub(id) {
 }
 
 function toggleSpecificInput() {
-    const type = document.getElementById('bType').value;
+    // 🔴 পপআপের বদলে এখন সিলেক্ট করা বাটন থেকে ডাটা নিবে
+    const type = document.querySelector('input[name="bType"]:checked').value;
     document.getElementById('specificIdDiv').style.display = (type === 'specific') ? 'block' : 'none';
 }
 
 async function sendBroadcast() {
     const msg = document.getElementById('bMsg').value;
-    const type = document.getElementById('bType').value;
+    const type = document.querySelector('input[name="bType"]:checked').value;
     const targetId = document.getElementById('bTargetId').value;
     
     if(!msg) return tg.showAlert("Message cannot be empty!");
