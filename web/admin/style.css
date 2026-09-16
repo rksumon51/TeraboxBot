@@ -1,34 +1,9 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: var(--tg-theme-bg-color, #f4f4f4);
-    color: var(--tg-theme-text-color, #000);
-    padding: 15px;
-    margin: 0;
-}
-.card {
-    background-color: var(--tg-theme-secondary-bg-color, #ffffff);
-    padding: 15px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.owner-card {
-    border-left: 4px solid #FFD700;
-}
-input, select, button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    border-radius: 8px;
-    border: 1px solid var(--tg-theme-hint-color, #ccc);
-    box-sizing: border-box;
-    font-size: 16px;
-}
-button {
-    background-color: var(--tg-theme-button-color, #3390ec);
-    color: var(--tg-theme-button-text-color, #ffffff);
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 15px;
-}
+body { font-family: Arial, sans-serif; background: var(--tg-theme-bg-color, #f4f4f4); color: var(--tg-theme-text-color, #000); padding: 15px; margin: 0; }
+.card { background: var(--tg-theme-secondary-bg-color, #fff); padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
+input, textarea { width: 100%; padding: 10px; margin: 5px 0 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
+button { padding: 10px; border-radius: 5px; width: 100%; border: none; cursor: pointer; color: white; font-weight: bold; }
+.btn-primary { background: #0088cc; }
+.btn-danger { background: #dc3545; }
+ul { list-style-type: none; padding: 0; }
+li { padding: 10px; background: var(--tg-theme-bg-color, #eee); margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+li button { width: auto; background: transparent; padding: 0; font-size: 16px; color: red; }
