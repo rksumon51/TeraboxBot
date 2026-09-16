@@ -30,6 +30,7 @@
                 <li id="nav-users" onclick="switchTab('users')"><i class="fa-solid fa-users"></i> Manage Users</li>
                 <li id="nav-admins" onclick="switchTab('admins')"><i class="fa-solid fa-user-tie"></i> Managers/Admins</li>
                 <li id="nav-forcesub" onclick="switchTab('forcesub')"><i class="fa-solid fa-shield-halved"></i> Force Subscribe</li>
+                <li id="nav-botsettings" onclick="switchTab('botsettings')"><i class="fa-solid fa-gears"></i> Help & Plans</li>
                 <li id="nav-broadcast" onclick="switchTab('broadcast')"><i class="fa-solid fa-bullhorn"></i> Broadcast</li>
             </ul>
         </aside>
@@ -87,20 +88,16 @@
                         <label>User ID</label>
                         <input type="number" id="adminId" placeholder="Enter Telegram User ID">
                     </div>
-                    
                     <div class="input-group">
                         <label>Select Role</label>
                         <div class="role-selector">
                             <input type="radio" id="roleManager" name="adminRole" value="Manager" checked>
                             <label for="roleManager" class="role-btn">👤 Manager</label>
-                            
                             <input type="radio" id="roleCoOwner" name="adminRole" value="Co-Owner">
                             <label for="roleCoOwner" class="role-btn">👑 Co-Owner</label>
                         </div>
                     </div>
-
                     <button onclick="addAdmin()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Add Admin</button>
-                    
                     <h4 style="margin-top: 25px;">Current Admins</h4>
                     <ul id="adminList" class="channel-list"></ul>
                 </div>
@@ -126,29 +123,48 @@
                 </div>
             </div>
 
-            <!-- 📢 BROADCAST TAB (New Custom Buttons) -->
+            <!-- ⚙️ HELP & PLANS SETTINGS TAB -->
+            <div id="view-botsettings" class="view-section" style="display: none;">
+                <div class="manage-card">
+                    <div class="card-header">
+                        <div class="icon-box"><i class="fa-solid fa-gears"></i></div>
+                        <div><h3>Help & Plan Configuration</h3><p>Control what users see when they click Help or Plan.</p></div>
+                    </div>
+                    
+                    <h4 style="margin-bottom: 12px; color: var(--primary);">📞 Help & Social Links (Leave empty to hide)</h4>
+                    <div class="input-group"><label>Support Email</label><input type="text" id="helpEmail" placeholder="support@domain.com"></div>
+                    <div class="input-group"><label>Facebook Profile/Page</label><input type="text" id="helpFb" placeholder="https://facebook.com/..."></div>
+                    <div class="input-group"><label>Telegram Contact/Username</label><input type="text" id="helpTg" placeholder="@username or link"></div>
+                    <div class="input-group"><label>WhatsApp Number/Link</label><input type="text" id="helpWa" placeholder="+8801..."></div>
+
+                    <h4 style="margin: 25px 0 12px; color: var(--primary);">💎 Subscription Plan Text</h4>
+                    <div class="input-group">
+                        <label>Plan Details (Supports HTML formatting)</label>
+                        <textarea id="planText" rows="6" placeholder="Write pricing and plans here..."></textarea>
+                    </div>
+
+                    <button onclick="saveSettings()" class="btn-primary w-100"><i class="fa-solid fa-save"></i> Save Settings</button>
+                </div>
+            </div>
+
+            <!-- 📢 BROADCAST TAB -->
             <div id="view-broadcast" class="view-section" style="display: none;">
                 <div class="manage-card">
                     <div class="card-header">
                         <div class="icon-box purple-bg"><i class="fa-solid fa-bullhorn"></i></div>
                         <div><h3>Advanced Broadcast</h3><p>Send message to specific groups or users.</p></div>
                     </div>
-                    
-                    <!-- 🔴 New Custom Target Buttons -->
                     <div class="input-group">
                         <label>Target Audience</label>
                         <div class="role-selector">
                             <input type="radio" id="bAll" name="bType" value="all" checked onchange="toggleSpecificInput()">
                             <label for="bAll" class="role-btn">🌍 All Users</label>
-                            
                             <input type="radio" id="bVip" name="bType" value="vip" onchange="toggleSpecificInput()">
                             <label for="bVip" class="role-btn">⭐ VIPs</label>
-                            
                             <input type="radio" id="bSpecific" name="bType" value="specific" onchange="toggleSpecificInput()">
                             <label for="bSpecific" class="role-btn">🎯 Target ID</label>
                         </div>
                     </div>
-
                     <div class="input-group" id="specificIdDiv" style="display: none;">
                         <label>Enter Specific User ID</label>
                         <input type="number" id="bTargetId" placeholder="e.g. 8110034101">
