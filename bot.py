@@ -4,7 +4,7 @@ import aiohttp
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart, Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, FSInputFile
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, FSInputFile, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.enums import ParseMode
 
 import config
@@ -13,6 +13,16 @@ import api_handler as api
 
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher()
+
+def get_main_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="❓ Help"), KeyboardButton(text="💎 Plan")],
+            [KeyboardButton(text="🎁 Refer"), KeyboardButton(text="👤 My")]
+        ],
+        resize_keyboard=True,
+        input_field_placeholder="Select an option or send a Terabox link..."
+    )
 
 async def get_missing_channels(user_id):
     missing = []
@@ -39,15 +49,16 @@ async def send_welcome(message: types.Message):
         markup = await fsub_markup(missing)
         await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=markup, parse_mode=ParseMode.HTML)
         return
-    text = ("<b>Send Me TeraBox Links</b>\n\n/videos use This For Videos\n/videos use This For Videos\n\n<b>For TeraBox Links ❤️</b>")
-    await message.answer(text, parse_mode=ParseMode.HTML)
+    text = "<b>Send Me TeraBox Links !</b>\n\nI will download or stream it for you instantly. 🚀"
+    await message.answer(text, reply_markup=get_main_menu(), parse_mode=ParseMode.HTML)
 
 @dp.callback_query(F.data == "verify_join")
 async def verify_join_callback(call: types.CallbackQuery):
     missing = await get_missing_channels(call.from_user.id)
     if not missing:
-        text = ("<b>Send Me TeraBox Links</b>\n\n/videos use This For Videos\n/videos use This For Videos\n\n<b>For TeraBox Links ❤️</b>")
-        await call.message.edit_text(text, parse_mode=ParseMode.HTML)
+        await call.message.delete()
+        text = "<b>Thank you for joining! 🎉</b>\n\n<b>Send Me TeraBox Links !</b>"
+        await call.message.answer(text, reply_markup=get_main_menu(), parse_mode=ParseMode.HTML)
     else:
         await call.answer("You haven't joined all channels yet!", show_alert=True)
 
@@ -63,17 +74,57 @@ async def admin_panel(message: types.Message):
     markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🌐 Open Admin Panel", web_app=WebAppInfo(url=admin_url))]])
     await message.answer("🔐 <b>Admin Dashboard</b>\n\nএখান থেকে সবকিছু কন্ট্রোল করুন:", reply_markup=markup, parse_mode=ParseMode.HTML)
 
+# === Menu Handlers (Dynamic from DB) ===
+@dp.message(F.text == "👤 My")
+async def my_profile_handler(message: types.Message):
+    user = await db.get_user(message.from_user.id)
+    vip_status = "🌟 VIP Member" if user.get("vip", False) else "👤 Normal User"
+    
+    text = (f"<b>Your Profile Information:</b>\n\n"
+            f"🆔 <b>User ID:</b> <code>{message.from_user.id}</code>\n"
+            f"🔰 <b>Position:</b> {vip_status}")
+    await message.answer(text, parse_mode=ParseMode.HTML)
+
+@dp.message(F.text == "❓ Help")
+async def help_handler(message: types.Message):
+    settings = await db.get_settings()
+    text = "<b>📞 Help & Support Center</b>\n\nIf you need any assistance, feel free to contact us through our official channels below:\n"
+    
+    if settings.get("help_email"): text += f"\n📧 <b>Email:</b> {settings['help_email']}"
+    if settings.get("help_fb"): text += f"\n📘 <b>Facebook:</b> {settings['help_fb']}"
+    if settings.get("help_tg"): text += f"\n✈️ <b>Telegram:</b> {settings['help_tg']}"
+    if settings.get("help_wa"): text += f"\n📱 <b>WhatsApp:</b> {settings['help_wa']}"
+    
+    if not any([settings.get("help_email"), settings.get("help_fb"), settings.get("help_tg"), settings.get("help_wa")]):
+        text += "\n<i>No support channels configured yet.</i>"
+        
+    await message.answer(text, parse_mode=ParseMode.HTML)
+
+@dp.message(F.text == "💎 Plan")
+async def plan_handler(message: types.Message):
+    settings = await db.get_settings()
+    plan_text = settings.get("plan_text", "No plans configured.")
+    text = f"<b>💎 Subscription Plans & Pricing</b>\n\n{plan_text}"
+    await message.answer(text, parse_mode=ParseMode.HTML)
+
+@dp.message(F.text == "🎁 Refer")
+async def refer_handler(message: types.Message):
+    bot_info = await bot.get_me()
+    ref_link = f"https://t.me/{bot_info.username}?start={message.from_user.id}"
+    text = f"<b>🎁 Refer & Earn</b>\n\nShare this link with your friends:\n<code>{ref_link}</code>"
+    await message.answer(text, parse_mode=ParseMode.HTML)
+
 @dp.message(F.text.contains("terabox"))
 async def handle_link(message: types.Message):
     missing = await get_missing_channels(message.from_user.id)
     if missing:
         await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=await fsub_markup(missing), parse_mode=ParseMode.HTML)
         return
-    msg = await message.answer("⏳ Wait 2-4 Seconds.")
+    
+    msg = await message.answer("⏳ Wait 2-4 Seconds...", reply_markup=get_main_menu())
     link, size, title = await api.get_terabox_direct_link(message.text)
     
-    if not link:
-        return await msg.edit_text("❌ লিংকটি কাজ করছে না।")
+    if not link: return await msg.edit_text("❌ লিংকটি কাজ করছে না।")
         
     if size and size <= 50 * 1024 * 1024:
         await msg.edit_text("⏳ Downloading...")
@@ -93,6 +144,7 @@ async def handle_link(message: types.Message):
         markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="▶️ Watch & Download", web_app=WebAppInfo(url=player_url))]])
         await msg.edit_text(f"📁 <b>{title}</b>\n\n⚠️ File is too large. Watch below:", reply_markup=markup, parse_mode=ParseMode.HTML)
 
+# === Web Server & API Routes ===
 def cors_headers(): return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
 async def options_handler(request): return web.Response(headers=cors_headers())
 
@@ -100,12 +152,12 @@ async def api_get_stats(request):
     raw_users = await db.get_all_users()
     subs = await db.get_all_fsubs()
     admins = await db.get_all_admins()
+    settings = await db.get_settings()
     
     unique_users = {}
     for u in raw_users:
         uid = u["user_id"]
-        if uid not in unique_users or u.get("vip", False):
-            unique_users[uid] = u
+        if uid not in unique_users or u.get("vip", False): unique_users[uid] = u
             
     users = list(unique_users.values())
     active_users = [u for u in users if u.get("is_active", True)]
@@ -115,8 +167,14 @@ async def api_get_stats(request):
         "active_users": len(active_users),
         "users_list": [{"id": u["user_id"], "vip": u.get("vip", False), "active": u.get("is_active", True)} for u in users],
         "subs": [{"id": s["channel_id"], "url": s["channel_url"]} for s in subs],
-        "admins": [{"id": a["user_id"], "role": a["role"]} for a in admins]
+        "admins": [{"id": a["user_id"], "role": a["role"]} for a in admins],
+        "settings": settings
     }, headers=cors_headers())
+
+async def api_update_settings(request):
+    data = await request.json()
+    await db.update_settings(data)
+    return web.json_response({"status": "ok"}, headers=cors_headers())
 
 async def api_toggle_vip(request):
     data = await request.json()
@@ -152,13 +210,11 @@ async def api_broadcast(request):
         try: await bot.send_message(int(data['target_id']), msg)
         except: pass
     else:
-        # 🔴 ব্রডকাস্ট পাঠানোর সময় ডুপ্লিকেট ইউজারদের ফিল্টার করা হলো (এক আইডি ১ বারই মেসেজ পাবে)
         raw_users = await db.get_all_users()
         unique_users = {}
         for u in raw_users:
             uid = u["user_id"]
-            if uid not in unique_users or u.get("vip", False):
-                unique_users[uid] = u
+            if uid not in unique_users or u.get("vip", False): unique_users[uid] = u
                 
         for u in unique_users.values():
             if b_type == 'vip' and not u.get('vip', False): continue
@@ -175,6 +231,7 @@ async def web_server():
     app = web.Application()
     app.router.add_options('/api/{tail:.*}', options_handler)
     app.router.add_get('/api/stats', api_get_stats)
+    app.router.add_post('/api/update_settings', api_update_settings)
     app.router.add_post('/api/toggle_vip', api_toggle_vip)
     app.router.add_post('/api/add_admin', api_add_admin)
     app.router.add_post('/api/del_admin', api_del_admin)
