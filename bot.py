@@ -101,13 +101,10 @@ async def api_get_stats(request):
     subs = await db.get_all_fsubs()
     admins = await db.get_all_admins()
     
-    # 🔴 ডুপ্লিকেট ইউজার ফিক্স লজিক
     unique_users = {}
     for u in raw_users:
         uid = u["user_id"]
-        if uid not in unique_users:
-            unique_users[uid] = u
-        elif u.get("vip", False): # যদি ডুপ্লিকেটের মধ্যে কেউ VIP থাকে, তাকে প্রায়োরিটি দিবে
+        if uid not in unique_users or u.get("vip", False):
             unique_users[uid] = u
             
     users = list(unique_users.values())
@@ -155,8 +152,15 @@ async def api_broadcast(request):
         try: await bot.send_message(int(data['target_id']), msg)
         except: pass
     else:
-        users = await db.get_all_users()
-        for u in users:
+        # 🔴 ব্রডকাস্ট পাঠানোর সময় ডুপ্লিকেট ইউজারদের ফিল্টার করা হলো (এক আইডি ১ বারই মেসেজ পাবে)
+        raw_users = await db.get_all_users()
+        unique_users = {}
+        for u in raw_users:
+            uid = u["user_id"]
+            if uid not in unique_users or u.get("vip", False):
+                unique_users[uid] = u
+                
+        for u in unique_users.values():
             if b_type == 'vip' and not u.get('vip', False): continue
             try:
                 await bot.send_message(u['user_id'], msg)
