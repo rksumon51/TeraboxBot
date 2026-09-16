@@ -1,67 +1,62 @@
 import aiohttp
 import re
+import database as db
 
-async def get_terabox_direct_link(text):
+# 🔴 Smart JSON Parser (যেকোনো API থেকে লিংক খুঁজে বের করবে)
+def extract_link(data):
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k.lower() in ['dlink', 'link', 'url', 'direct_link', 'download_link', 'fast download'] and isinstance(v, str) and v.startswith('http'):
+                return v
+            res = extract_link(v)
+            if res: return res
+    elif isinstance(data, list):
+        for item in data:
+            res = extract_link(item)
+            if res: return res
+    return None
+
+async def get_terabox_direct_link(text, request_type="download"):
     try:
-        # মেসেজ থেকে লিংক বের করা
         match = re.search(r'(https?://[^\s]+(?:terabox|tera)[^\s]+)', text)
-        if not match:
-            return None, None, None
+        if not match: return None, None, None
         
-        url = match.group(1)
+        terabox_url = match.group(1)
+        settings = await db.get_settings()
         
-        # ⏳ ৮ সেকেন্ডের টাইমআউট, যাতে বট হ্যাং হয়ে না থাকে
+        # প্যানেল থেকে ডাউনলোড বা স্ট্রিমের API গুলো আনা
+        apis = settings.get(f"{request_type}_apis", [])
+        if not apis:
+            # ফলব্যাক ডিফল্ট API
+            apis = ["https://teraboxvideodownloader.nepcoderdevs.workers.dev/?url="]
+            
         timeout = aiohttp.ClientTimeout(total=8)
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/json"
-        }
+        headers = {"User-Agent": "Mozilla/5.0"}
         
         async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
-            
-            # 🔥 API 1: Website Video Downloader (Very Fast)
-            try:
-                api_1 = "https://ytshorts.savetube.me/api/v1/terabox-downloader"
-                async with session.post(api_1, json={"url": url}) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        if "response" in data and len(data["response"]) > 0:
-                            video = data["response"][0]
-                            # ডিরেক্ট লিংক এবং টাইটেল
-                            link = video.get("resolutions", {}).get("Fast Download", video.get("link"))
-                            title = video.get("title", "Terabox_Video.mp4")
-                            
-                            # সাইজ (MB/GB) ক্যালকুলেট করে বাইটে কনভার্ট করা
-                            size_str = str(video.get("size", "0 MB"))
-                            size_bytes = 0
-                            if "MB" in size_str: size_bytes = float(size_str.replace("MB", "").strip()) * 1024 * 1024
-                            elif "GB" in size_str: size_bytes = float(size_str.replace("GB", "").strip()) * 1024 * 1024 * 1024
-                            
-                            if link: return link, size_bytes, title
-            except Exception as e:
-                print(f"API 1 Failed: {e}")
-
-            # ♻️ API 2: Fallback Downloader API (যদি প্রথমটি কাজ না করে)
-            try:
-                # লিংক থেকে shorturl আইডি বের করা (যেমন: 1CIWi7nOPloW...)
-                shorturl_match = re.search(r'/s/([a-zA-Z0-9_-]+)', url)
-                if shorturl_match:
-                    shorturl = shorturl_match.group(1)
-                    api_2 = f"https://terabox-dl.qtcloud.workers.dev/api/get-info?shorturl={shorturl}"
+            for api_base in apis:
+                try:
+                    # যদি API এর শেষে ?url= থাকে, তবে সরাসরি লিংক বসবে
+                    req_url = f"{api_base}{terabox_url}" if api_base.endswith('=') else f"{api_base}?url={terabox_url}"
                     
-                    async with session.get(api_2) as resp:
+                    async with session.get(req_url) as resp:
                         if resp.status == 200:
                             data = await resp.json()
-                            if "list" in data and len(data["list"]) > 0:
-                                video = data["list"][0]
-                                link = video.get("dlink")
-                                title = video.get("filename", "Terabox_Video.mp4")
-                                size_bytes = int(video.get("size", 0))
+                            direct_link = extract_link(data)
+                            
+                            if direct_link:
+                                # টাইটেল এবং সাইজ খোঁজার চেষ্টা
+                                title = "Terabox_Video.mp4"
+                                size_bytes = 0
                                 
-                                if link: return link, size_bytes, title
-            except Exception as e:
-                print(f"API 2 Failed: {e}")
+                                # সাধারনভাবে সাইজ বের করার লজিক
+                                str_data = str(data)
+                                if "MB" in str_data: size_bytes = 15 * 1024 * 1024 # অনুমানিক
+                                
+                                return direct_link, size_bytes, title
+                except Exception as e:
+                    print(f"API Failed: {api_base} - {e}")
+                    continue # একটি কাজ না করলে পরের API তে যাবে (আনলিমিটেড ফলব্যাক)
 
     except Exception as e:
         print(f"Main Terabox Error: {e}")
