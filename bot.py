@@ -84,19 +84,52 @@ async def help_handler(message: types.Message):
         text += "\n<i>No support channels configured yet.</i>"
     await message.answer(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
+# === 🔴 Dynamic Plan Buttons & Payment Logic ===
 @dp.message(F.text == "💎 Plan")
 async def plan_handler(message: types.Message):
     plans = await db.get_all_plans()
     if not plans:
-        text = "<b>💎 VIP Subscription Plans</b>\n\nCurrently, there are no premium plans available. Enjoy the free features!"
-    else:
-        text = "<b>💎 VIP Subscription Plans</b>\n\nChoose a plan that suits you best:\n\n"
-        for p in plans:
-            text += f"🔹 <b>{p['name']}</b>\n"
-            text += f"⏳ Duration: {p['duration']}\n"
-            text += f"💰 Price: {p['price']}\n\n"
-        text += "<i>Contact admin to purchase a subscription.</i>"
-    await message.answer(text, parse_mode=ParseMode.HTML)
+        return await message.answer("<b>💎 VIP Subscription Plans</b>\n\nCurrently, there are no premium plans available.", parse_mode=ParseMode.HTML)
+    
+    markup = InlineKeyboardMarkup(inline_keyboard=[])
+    for p in plans:
+        markup.inline_keyboard.append([InlineKeyboardButton(text=f"💎 {p['name']} - {p['price']}", callback_data=f"buyplan_{p['plan_id']}")])
+        
+    await message.answer("<b>💎 VIP Subscription Plans</b>\n\nSelect a plan from below to see payment details:", reply_markup=markup, parse_mode=ParseMode.HTML)
+
+@dp.callback_query(F.data.startswith("buyplan_"))
+async def buy_plan_callback(call: types.CallbackQuery):
+    plan_id = call.data.split("buyplan_")[1]
+    plans = await db.get_all_plans()
+    selected_plan = next((p for p in plans if p['plan_id'] == plan_id), None)
+    
+    if not selected_plan: return await call.answer("Plan not found!", show_alert=True)
+    
+    settings = await db.get_settings()
+    pay_text = ""
+    if settings.get("pay_bkash"): pay_text += f"🟣 <b>bKash:</b> <code>{settings['pay_bkash']}</code>\n"
+    if settings.get("pay_nagad"): pay_text += f"🟠 <b>Nagad:</b> <code>{settings['pay_nagad']}</code>\n"
+    if settings.get("pay_rocket"): pay_text += f"🚀 <b>Rocket:</b> <code>{settings['pay_rocket']}</code>\n"
+    if settings.get("pay_crypto"): pay_text += f"🪙 <b>Crypto:</b> <code>{settings['pay_crypto']}</code>\n"
+    
+    if not pay_text: pay_text = "<i>No automated payment methods configured. Please contact admin.</i>\n"
+    
+    text = (f"🛒 <b>Checkout: {selected_plan['name']}</b>\n\n"
+            f"⏳ <b>Duration:</b> {selected_plan['duration']}\n"
+            f"💰 <b>Amount to Pay:</b> {selected_plan['price']}\n\n"
+            f"💳 <b>Payment Methods:</b>\n{pay_text}\n"
+            f"⚠️ <i>After sending the payment, please send a screenshot of the transaction to the Admin for VIP activation!</i>")
+            
+    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Back to Plans", callback_data="back_to_plans")]])
+    await call.message.edit_text(text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+@dp.callback_query(F.data == "back_to_plans")
+async def back_to_plans_callback(call: types.CallbackQuery):
+    plans = await db.get_all_plans()
+    markup = InlineKeyboardMarkup(inline_keyboard=[])
+    for p in plans: markup.inline_keyboard.append([InlineKeyboardButton(text=f"💎 {p['name']} - {p['price']}", callback_data=f"buyplan_{p['plan_id']}")])
+    await call.message.edit_text("<b>💎 VIP Subscription Plans</b>\n\nSelect a plan from below to see payment details:", reply_markup=markup, parse_mode=ParseMode.HTML)
+# ===============================================
 
 @dp.message(F.text == "🎁 Refer")
 async def refer_handler(message: types.Message):
