@@ -18,18 +18,23 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        video { width: 100%; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); background: #000; margin-bottom: 20px; }
+        video, iframe { 
+            width: 100%; height: 250px; border-radius: 12px; border: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); background: #000; margin-bottom: 20px; 
+        }
         
         .btn {
             display: inline-block; background: #2563eb; color: white; padding: 12px 24px;
             text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;
-            transition: 0.3s; width: 100%; box-sizing: border-box; text-align: center;
+            transition: 0.3s; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 10px;
         }
         .btn:hover { background: #1d4ed8; }
+        .btn-alt { background: #10b981; }
+        .btn-alt:hover { background: #059669; }
         
         #log-box {
             text-align: left; background: #1e293b; padding: 10px; border-radius: 8px;
-            font-size: 12px; color: #94a3b8; font-family: monospace; margin-top: 20px; max-height: 150px; overflow-y: auto;
+            font-size: 12px; color: #94a3b8; font-family: monospace; margin-top: 20px; max-height: 120px; overflow-y: auto;
         }
         .success-text { color: #22c55e; font-weight: bold; }
         .error-text { color: #ef4444; font-weight: bold; }
@@ -41,17 +46,23 @@
         <!-- Loading Screen -->
         <div id="loader">
             <div class="spinner"></div>
-            <h3 style="margin-bottom: 5px;">⏳ Hacking Terabox Server...</h3>
-            <p style="color: #94a3b8; font-size: 13px; margin-top: 0;">Bypassing CORS & Cloudflare securely</p>
+            <h3 style="margin-bottom: 5px;">⏳ Processing Video...</h3>
+            <p style="color: #94a3b8; font-size: 13px; margin-top: 0;">Establishing secure connection</p>
             
-            <!-- Live Tracker Console -->
             <div id="log-box">Initializing bypass protocols...<br></div>
         </div>
 
-        <!-- Video Player Screen -->
-        <div id="player-section" style="display: none;">
+        <!-- Custom Video Player (If Direct Link Found) -->
+        <div id="custom-player-section" style="display: none;">
             <video id="video-player" controls preload="metadata" playsinline></video>
-            <a id="download-btn" href="#" class="btn" target="_blank" download>📥 Download Video (Full Speed)</a>
+            <a id="download-btn" href="#" class="btn" target="_blank" download>📥 Download (Direct Link)</a>
+        </div>
+
+        <!-- Official Embed Player (If API is blocked) -->
+        <div id="embed-player-section" style="display: none;">
+            <h4 style="margin-top: 0; color: #facc15;">⚡ Premium Stream Ready</h4>
+            <iframe id="terabox-iframe" allowfullscreen></iframe>
+            <a id="alt-download-btn" href="#" class="btn btn-alt" target="_blank">📥 Alternative Download</a>
         </div>
     </div>
 
@@ -68,22 +79,20 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        function findDirectLink(data, keys) {
-            if (typeof data === 'object' && data !== null) {
-                for (let k in data) {
-                    if (keys.includes(k.toLowerCase()) && typeof data[k] === 'string' && data[k].startsWith('http')) {
-                        return data[k];
-                    }
-                    let res = findDirectLink(data[k], keys);
-                    if (res) return res;
-                }
-            } else if (Array.isArray(data)) {
-                for (let item of data) {
-                    let res = findDirectLink(item, keys);
-                    if (res) return res;
-                }
-            }
-            return null;
+        // 🔴 Permanent Fallback System (Official Iframe)
+        function loadOfficialEmbed(shortCode) {
+            log("<span class='error-text'>⚠️ Fast API Blocked. Switching to Official Terabox Player...</span>");
+            
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('embed-player-section').style.display = 'block';
+                
+                // Terabox Official Embed Link
+                document.getElementById('terabox-iframe').src = `https://www.terabox.app/sharing/embed?surl=${shortCode}`;
+                
+                // Alternative Downloader Website (100% working fallback)
+                document.getElementById('alt-download-btn').href = `https://teraboxdownloader.site/?url=${encodeURIComponent(teraUrl)}`;
+            }, 1000);
         }
 
         async function extractVideo() {
@@ -96,70 +105,39 @@
             let match = teraUrl.match(/\/s\/([a-zA-Z0-9_-]+)/);
             if (match) shortCode = match[1];
 
-            // 🔴 3 Powerful Worker APIs
-            const apis = [
-                "https://teraboxvideodownloader.nepcoderdevs.workers.dev/?url=" + encodeURIComponent(teraUrl),
-                "https://terabox-dl.qtcloud.workers.dev/api/get-info?shorturl=" + shortCode,
-                "https://terabox.hnn.workers.dev/api/get-info?shorturl=" + shortCode
-            ];
-
-            // 🔴 3 Global CORS Proxies (ব্রাউজারের সিকিউরিটি ভাঙার হাতিয়ার)
-            const proxies = [
-                "", // First try direct
-                "https://api.allorigins.win/raw?url=", 
-                "https://api.codetabs.com/v1/proxy?quest="
-            ];
-
-            let attemptCount = 1;
-
-            for (let api of apis) {
-                if (!shortCode && api.includes('shorturl=')) continue;
-
-                for (let proxy of proxies) {
-                    let fetchUrl = proxy ? proxy + encodeURIComponent(api) : api;
-                    let proxyName = proxy ? "CORS Proxy" : "Direct Link";
+            log("🔄 Trying Fast Direct Link (CORS Proxy)...");
+            
+            try {
+                // Best CORS Proxy + Working API
+                let proxyUrl = "https://corsproxy.io/?" + encodeURIComponent("https://teraboxvideodownloader.nepcoderdevs.workers.dev/?url=" + teraUrl);
+                let response = await fetch(proxyUrl);
+                
+                if (response.ok) {
+                    let data = await response.json();
+                    let dlink = data.dlink || data.direct_link || (data.response && data.response[0] ? data.response[0].link : null);
                     
-                    log(`[${attemptCount}] Trying API via ${proxyName}...`);
-                    attemptCount++;
-                    
-                    try {
-                        let response = await fetch(fetchUrl);
-                        if (response.ok) {
-                            let data = await response.json();
-                            
-                            // Extract direct link
-                            let dlink = findDirectLink(data, ['dlink', 'link', 'direct_link', 'url', 'fast download']);
-                            
-                            if (dlink) {
-                                log("<span class='success-text'>✅ Successfully Extracted Video Link!</span>");
-                                showPlayer(dlink);
-                                return;
-                            } else {
-                                log("⚠️ Response OK, but no video link inside.");
-                            }
-                        } else {
-                            log(`❌ Blocked or Failed (Status: ${response.status})`);
-                        }
-                    } catch (e) {
-                        log(`❌ Network/CORS Error`);
+                    if (dlink) {
+                        log("<span class='success-text'>✅ Direct Link Extracted Successfully!</span>");
+                        
+                        setTimeout(() => {
+                            document.getElementById('loader').style.display = 'none';
+                            document.getElementById('custom-player-section').style.display = 'block';
+                            document.getElementById('video-player').src = dlink;
+                            document.getElementById('download-btn').href = dlink;
+                        }, 500);
+                        return;
                     }
                 }
+            } catch (e) {
+                log("❌ Direct Link failed due to Browser Security.");
             }
-            
-            log("<span class='error-text'>❌ All servers blocked. Link might be private or deleted!</span>");
-        }
 
-        function showPlayer(videoLink) {
-            setTimeout(() => {
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('player-section').style.display = 'block';
-                
-                const player = document.getElementById('video-player');
-                player.src = videoLink;
-                
-                const dlBtn = document.getElementById('download-btn');
-                dlBtn.href = videoLink;
-            }, 1000); // 1 sec delay to show success message
+            // 🔴 If fetch fails, load the unbreakable official player
+            if (shortCode) {
+                loadOfficialEmbed(shortCode);
+            } else {
+                log("<span class='error-text'>❌ Invalid Terabox Link!</span>");
+            }
         }
 
         // Run instantly
