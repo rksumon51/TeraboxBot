@@ -34,11 +34,36 @@ async function loadData() {
             document.getElementById('helpFb').value = data.settings.help_fb || "";
             document.getElementById('helpTg').value = data.settings.help_tg || "";
             document.getElementById('helpWa').value = data.settings.help_wa || "";
-            // 🔴 Payment Data Fill
             document.getElementById('payBkash').value = data.settings.pay_bkash || "";
             document.getElementById('payNagad').value = data.settings.pay_nagad || "";
             document.getElementById('payRocket').value = data.settings.pay_rocket || "";
             document.getElementById('payCrypto').value = data.settings.pay_crypto || "";
+            
+            // 🔴 Render Download APIs
+            const dlList = document.getElementById('dlApiList');
+            dlList.innerHTML = "";
+            (data.settings.download_apis || []).forEach(api => {
+                dlList.innerHTML += `<li style="flex-direction:column; align-items:flex-start;">
+                    <div class="api-url-text">${api}</div>
+                    <div style="margin-top:10px;">
+                        <button class="test-btn" onclick="testApi('${api}')"><i class="fa-solid fa-stethoscope"></i> Test</button>
+                        <button class="delete-btn" style="display:inline-flex; width:auto; padding:5px 10px;" onclick="delApi('download_apis', '${api}')"><i class="fa-solid fa-trash"></i> Remove</button>
+                    </div>
+                </li>`;
+            });
+
+            // 🔴 Render Stream APIs
+            const stList = document.getElementById('stApiList');
+            stList.innerHTML = "";
+            (data.settings.stream_apis || []).forEach(api => {
+                stList.innerHTML += `<li style="flex-direction:column; align-items:flex-start;">
+                    <div class="api-url-text">${api}</div>
+                    <div style="margin-top:10px;">
+                        <button class="test-btn" onclick="testApi('${api}')"><i class="fa-solid fa-stethoscope"></i> Test</button>
+                        <button class="delete-btn" style="display:inline-flex; width:auto; padding:5px 10px;" onclick="delApi('stream_apis', '${api}')"><i class="fa-solid fa-trash"></i> Remove</button>
+                    </div>
+                </li>`;
+            });
         }
         
         const tbody = document.getElementById('usersTableBody');
@@ -66,13 +91,10 @@ async function loadData() {
 
         const pList = document.getElementById('planList');
         pList.innerHTML = "";
-        if(data.plans.length === 0) pList.innerHTML = `<li style="justify-content:center; color:#94a3b8; border:none;">No plans created yet</li>`;
         data.plans.forEach(p => {
             pList.innerHTML += `<li style="flex-direction:column; align-items:flex-start;">
-                <div style="display:flex; justify-content:space-between; width:100%;">
-                    <b style="color:var(--primary); font-size:16px;">${p.name}</b>
-                    <button class="delete-btn" onclick="delPlan('${p.id}')"><i class="fa-solid fa-trash"></i></button>
-                </div>
+                <div style="display:flex; justify-content:space-between; width:100%;"><b style="color:var(--primary); font-size:16px;">${p.name}</b>
+                <button class="delete-btn" onclick="delPlan('${p.id}')"><i class="fa-solid fa-trash"></i></button></div>
                 <div style="font-size:13px; color:var(--text-muted); margin-top:5px;">⏳ Duration: ${p.duration} | 💰 Price: ${p.price}</div>
             </li>`;
         });
@@ -81,103 +103,92 @@ async function loadData() {
     }
 }
 
+// 🔴 API Management Functions
+async function addApi(apiType) {
+    const urlInput = (apiType === 'download_apis') ? document.getElementById('dlApiUrl') : document.getElementById('stApiUrl');
+    const url = urlInput.value.trim();
+    if(!url) return tg.showAlert("Please enter an API URL.");
+    
+    tg.MainButton.text = "Adding API..."; tg.MainButton.show();
+    await fetch(`${API_BASE}/api/add_api`, { method: 'POST', body: JSON.stringify({api_type: apiType, api_url: url}), headers: {'Content-Type': 'application/json'} });
+    tg.MainButton.hide();
+    urlInput.value = "";
+    loadData();
+}
+
+async function delApi(apiType, url) {
+    if(!confirm("Remove this API?")) return;
+    await fetch(`${API_BASE}/api/del_api`, { method: 'POST', body: JSON.stringify({api_type: apiType, api_url: url}), headers: {'Content-Type': 'application/json'} });
+    loadData();
+}
+
+async function testApi(url) {
+    tg.MainButton.text = "Testing API..."; tg.MainButton.show();
+    const res = await fetch(`${API_BASE}/api/test_api`, { method: 'POST', body: JSON.stringify({api_url: url}), headers: {'Content-Type': 'application/json'} });
+    const data = await res.json();
+    tg.MainButton.hide();
+    
+    if(data.status === "Active") tg.showAlert("✅ API is ACTIVE and Responding!");
+    else tg.showAlert("❌ API is DEAD or Not Responding properly!");
+}
+
 async function saveHelpSettings() {
-    const settingsData = {
-        help_email: document.getElementById('helpEmail').value,
-        help_fb: document.getElementById('helpFb').value,
-        help_tg: document.getElementById('helpTg').value,
-        help_wa: document.getElementById('helpWa').value
-    };
+    const settingsData = { help_email: document.getElementById('helpEmail').value, help_fb: document.getElementById('helpFb').value, help_tg: document.getElementById('helpTg').value, help_wa: document.getElementById('helpWa').value };
     tg.MainButton.text = "Saving Settings..."; tg.MainButton.show();
     await fetch(`${API_BASE}/api/update_settings`, { method: 'POST', body: JSON.stringify(settingsData), headers: {'Content-Type': 'application/json'} });
-    tg.MainButton.hide();
-    tg.showAlert("✅ Help settings saved successfully!");
+    tg.MainButton.hide(); tg.showAlert("✅ Help settings saved successfully!");
 }
 
 async function savePaymentSettings() {
-    const paymentData = {
-        pay_bkash: document.getElementById('payBkash').value,
-        pay_nagad: document.getElementById('payNagad').value,
-        pay_rocket: document.getElementById('payRocket').value,
-        pay_crypto: document.getElementById('payCrypto').value
-    };
+    const paymentData = { pay_bkash: document.getElementById('payBkash').value, pay_nagad: document.getElementById('payNagad').value, pay_rocket: document.getElementById('payRocket').value, pay_crypto: document.getElementById('payCrypto').value };
     tg.MainButton.text = "Saving Methods..."; tg.MainButton.show();
     await fetch(`${API_BASE}/api/update_settings`, { method: 'POST', body: JSON.stringify(paymentData), headers: {'Content-Type': 'application/json'} });
-    tg.MainButton.hide();
-    tg.showAlert("✅ Payment Methods saved successfully!");
+    tg.MainButton.hide(); tg.showAlert("✅ Payment Methods saved successfully!");
 }
 
 async function addPlan() {
-    const name = document.getElementById('pName').value;
-    const duration = document.getElementById('pDuration').value;
-    const price = document.getElementById('pPrice').value;
+    const name = document.getElementById('pName').value, duration = document.getElementById('pDuration').value, price = document.getElementById('pPrice').value;
     if(!name || !duration || !price) return tg.showAlert("Please fill all plan fields!");
-    
     const planId = "plan_" + Date.now(); 
-    
     tg.MainButton.text = "Creating Plan..."; tg.MainButton.show();
-    await fetch(`${API_BASE}/api/add_plan`, { 
-        method: 'POST', body: JSON.stringify({plan_id: planId, name: name, duration: duration, price: price}), headers: {'Content-Type': 'application/json'} 
-    });
-    tg.MainButton.hide();
-    
-    document.getElementById('pName').value = ""; document.getElementById('pDuration').value = ""; document.getElementById('pPrice').value = "";
-    loadData();
-    tg.showAlert("✅ Plan Created Successfully!");
+    await fetch(`${API_BASE}/api/add_plan`, { method: 'POST', body: JSON.stringify({plan_id: planId, name: name, duration: duration, price: price}), headers: {'Content-Type': 'application/json'} });
+    tg.MainButton.hide(); document.getElementById('pName').value = ""; document.getElementById('pDuration').value = ""; document.getElementById('pPrice').value = ""; loadData(); tg.showAlert("✅ Plan Created Successfully!");
 }
-
 async function delPlan(planId) {
     if(!confirm(`Remove this plan?`)) return;
-    await fetch(`${API_BASE}/api/del_plan`, { method: 'POST', body: JSON.stringify({plan_id: planId}), headers: {'Content-Type': 'application/json'} });
-    loadData();
+    await fetch(`${API_BASE}/api/del_plan`, { method: 'POST', body: JSON.stringify({plan_id: planId}), headers: {'Content-Type': 'application/json'} }); loadData();
 }
-
 async function toggleVIP(userId, status) {
-    await fetch(`${API_BASE}/api/toggle_vip`, { method: 'POST', body: JSON.stringify({user_id: userId, vip: status}), headers: {'Content-Type': 'application/json'} });
-    loadData();
+    await fetch(`${API_BASE}/api/toggle_vip`, { method: 'POST', body: JSON.stringify({user_id: userId, vip: status}), headers: {'Content-Type': 'application/json'} }); loadData();
 }
-
 async function addAdmin() {
-    const id = document.getElementById('adminId').value;
-    const role = document.querySelector('input[name="adminRole"]:checked').value; 
+    const id = document.getElementById('adminId').value, role = document.querySelector('input[name="adminRole"]:checked').value; 
     if(!id) return tg.showAlert("Enter Admin User ID!");
     await fetch(`${API_BASE}/api/add_admin`, { method: 'POST', body: JSON.stringify({user_id: id, role: role}), headers: {'Content-Type': 'application/json'} });
     document.getElementById('adminId').value = ""; loadData(); tg.showAlert("Admin Added!");
 }
-
 async function delAdmin(id) {
     if(!confirm("Remove this admin?")) return;
-    await fetch(`${API_BASE}/api/del_admin`, { method: 'POST', body: JSON.stringify({user_id: id}), headers: {'Content-Type': 'application/json'} });
-    loadData();
+    await fetch(`${API_BASE}/api/del_admin`, { method: 'POST', body: JSON.stringify({user_id: id}), headers: {'Content-Type': 'application/json'} }); loadData();
 }
-
 async function addSub() {
-    const id = document.getElementById('chId').value;
-    const url = document.getElementById('chUrl').value;
+    const id = document.getElementById('chId').value, url = document.getElementById('chUrl').value;
     if(!id || !url) return;
     await fetch(`${API_BASE}/api/add_sub`, { method: 'POST', body: JSON.stringify({channel_id: id, channel_url: url}), headers: {'Content-Type': 'application/json'} });
     document.getElementById('chId').value = ""; document.getElementById('chUrl').value = ""; loadData();
 }
-
 async function delSub(id) {
     if(!confirm(`Remove ${id}?`)) return;
-    await fetch(`${API_BASE}/api/del_sub`, { method: 'POST', body: JSON.stringify({channel_id: id}), headers: {'Content-Type': 'application/json'} });
-    loadData();
+    await fetch(`${API_BASE}/api/del_sub`, { method: 'POST', body: JSON.stringify({channel_id: id}), headers: {'Content-Type': 'application/json'} }); loadData();
 }
-
 function toggleSpecificInput() {
     const type = document.querySelector('input[name="bType"]:checked').value;
     document.getElementById('specificIdDiv').style.display = (type === 'specific') ? 'block' : 'none';
 }
-
 async function sendBroadcast() {
-    const msg = document.getElementById('bMsg').value;
-    const type = document.querySelector('input[name="bType"]:checked').value;
-    const targetId = document.getElementById('bTargetId').value;
-    
+    const msg = document.getElementById('bMsg').value, type = document.querySelector('input[name="bType"]:checked').value, targetId = document.getElementById('bTargetId').value;
     if(!msg) return tg.showAlert("Message cannot be empty!");
     if(type === 'specific' && !targetId) return tg.showAlert("Enter target User ID!");
-    
     tg.showConfirm(`Send message to ${type}?`, async function(confirmed) {
         if(confirmed) {
             tg.MainButton.text = "Sending..."; tg.MainButton.show();
