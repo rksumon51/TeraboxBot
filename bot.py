@@ -11,149 +11,138 @@ import config
 import database as db
 import api_handler as api
 
-# বট এবং ডিসপ্যাচার ইনিশিয়ালাইজেশন (Aiogram 3.x)
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher()
 
-# ==========================================
-# বটের কমান্ডস (Bot Commands)
-# ==========================================
+# === 🔥 Dynamic Force Sub Checker ===
+async def get_missing_channels(user_id):
+    missing = []
+    channels = await db.get_all_fsubs()
+    for ch in channels:
+        try:
+            member = await bot.get_chat_member(chat_id=ch['channel_id'], user_id=user_id)
+            if member.status not in ['member', 'administrator', 'creator']:
+                missing.append(ch)
+        except:
+            missing.append(ch) # বট যদি চ্যানেলে না থাকে বা ইউজার না থাকে
+    return missing
 
+async def fsub_markup(missing_channels):
+    markup = InlineKeyboardMarkup(inline_keyboard=[])
+    for ch in missing_channels:
+        markup.inline_keyboard.append([InlineKeyboardButton(text=f"❗ Join {ch['channel_id']} ✅", url=ch['channel_url'])])
+    markup.inline_keyboard.append([InlineKeyboardButton(text="✅ Joined", callback_data="verify_join")])
+    return markup
+
+# === Start Command ===
 @dp.message(CommandStart())
 async def send_welcome(message: types.Message):
-    """ইউজার /start দিলে এই মেসেজ যাবে"""
-    user_id = message.from_user.id
-    await db.get_user(user_id) # ডেটাবেসে ইউজার সেভ বা আপডেট করবে
+    await db.get_user(message.from_user.id)
     
-    text = (
-        "👋 <b>Terabox Video Bot-এ স্বাগতম!</b>\n\n"
-        "যেকোনো Terabox লিংক দিন, ভিডিও যদি ৫০ এমবির কম হয় তবে আমি সরাসরি ফাইল পাঠাবো, "
-        "আর বড় হলে সরাসরি দেখার/ডাউনলোডের লিংক দিবো।"
-    )
+    missing = await get_missing_channels(message.from_user.id)
+    if missing:
+        markup = await fsub_markup(missing)
+        await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=markup, parse_mode=ParseMode.HTML)
+        return
+
+    text = ("<b>Send Me TeraBox Links</b>\n\n"
+            "/videos use This For Videos\n"
+            "/videos use This For Videos\n\n"
+            "<b>For TeraBox Links ❤️</b>")
     await message.answer(text, parse_mode=ParseMode.HTML)
 
-@dp.message(Command("admin"))
-async def admin_panel(message: types.Message):
-    """অ্যাডমিনদের জন্য ওয়েব প্যানেল বাটন"""
-    user_id = message.from_user.id
-    role = await db.get_admin_role(user_id)
-    
-    if not role:
-        return # সাধারণ ইউজারদের জন্য কোনো রেসপন্স করবে না
-        
-    admin_url = f"{config.WEBAPP_URL}/admin/index.html"
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🌐 Open Web Panel", web_app=WebAppInfo(url=admin_url))]
-    ])
-    
-    await message.answer(f"🔐 <b>Admin Dashboard</b>\nআপনার রোল: {role}", reply_markup=markup, parse_mode=ParseMode.HTML)
-
-# ==========================================
-# লিংক প্রসেসিং লজিক (Video Handling)
-# ==========================================
-
-@dp.message(F.text.contains("terabox"))
-async def handle_terabox_link(message: types.Message):
-    """ইউজার Terabox লিংক দিলে এটি প্রসেস করবে"""
-    user_id = message.from_user.id
-    user = await db.get_user(user_id)
-    
-    # লিমিট চেক (ফ্রি ইউজারদের জন্য)
-    if not user['is_premium']:
-        settings = await db.settings_col.find_one({"_id": "global_settings"})
-        daily_limit = settings['daily_free_limit']
-        if user.get('daily_links', 0) >= daily_limit:
-            await message.answer("⚠️ আপনার আজকের ফ্রি লিমিট শেষ! দয়া করে সাবস্ক্রিপশন কিনুন।")
-            return
-            
-    processing_msg = await message.answer("⏳ লিংকটি প্রসেস করা হচ্ছে...")
-    
-    # API থেকে ডাইরেক্ট লিংক ও সাইজ বের করা
-    direct_link, size_bytes, title = await api.get_terabox_direct_link(message.text)
-    
-    if not direct_link:
-        await processing_msg.edit_text("❌ দুঃখিত, ভিডিওটি বের করা সম্ভব হয়নি। লিংকটি সঠিক কিনা চেক করুন।")
-        return
-        
-    # ফ্রি ইউজার হলে ডেটাবেসে লিমিট কাউন্ট +১ করে দেওয়া
-    if not user['is_premium']:
-        await db.users_col.update_one({"user_id": user_id}, {"$inc": {"daily_links": 1}})
-
-    # সাইজ চেক লজিক (৫০ মেগাবাইট)
-    MAX_SIZE = 50 * 1024 * 1024 # 50 MB
-    
-    if size_bytes and size_bytes <= MAX_SIZE:
-        await processing_msg.edit_text("⬇️ ভিডিও ডাউনলোড হচ্ছে, একটু অপেক্ষা করুন...")
-        file_path = f"{user_id}_video.mp4"
-        
-        # ভিডিও সার্ভারে ডাউনলোড করা
-        async with aiohttp.ClientSession() as session:
-            async with session.get(direct_link) as resp:
-                if resp.status == 200:
-                    with open(file_path, 'wb') as f:
-                        f.write(await resp.read())
-                        
-                    await processing_msg.edit_text("📤 ভিডিও টেলিগ্রামে আপলোড করা হচ্ছে...")
-                    
-                    # টেলিগ্রামে ফাইল পাঠানো
-                    video_file = FSInputFile(file_path)
-                    await bot.send_video(chat_id=message.chat.id, video=video_file, caption=f"🎬 <b>{title}</b>", parse_mode=ParseMode.HTML)
-                    
-                    # আপলোড শেষে সার্ভার থেকে ফাইল মুছে ফেলা
-                    os.remove(file_path)
-                    await processing_msg.delete()
-                else:
-                    await processing_msg.edit_text("❌ সার্ভার থেকে ফাইল ডাউনলোডে সমস্যা হয়েছে।")
+# === Joined Callback ===
+@dp.callback_query(F.data == "verify_join")
+async def verify_join_callback(call: types.CallbackQuery):
+    missing = await get_missing_channels(call.from_user.id)
+    if not missing:
+        text = ("<b>Send Me TeraBox Links</b>\n\n"
+                "/videos use This For Videos\n"
+                "/videos use This For Videos\n\n"
+                "<b>For TeraBox Links ❤️</b>")
+        await call.message.edit_text(text, parse_mode=ParseMode.HTML)
+        await call.answer("You have successfully joined!", show_alert=False)
     else:
-        # ৫০ এমবির বেশি হলে Web App প্লেয়ার লিংক দেওয়া
-        player_url = f"{config.WEBAPP_URL}/player/player.html?link={direct_link}&title={title}"
-        markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="▶️ Watch & Download", web_app=WebAppInfo(url=player_url))]
-        ])
-        
-        text = (
-            f"🎬 <b>{title}</b>\n\n"
-            "⚠️ <i>ভিডিওটি ৫০ এমবির চেয়ে বড়। তাই সরাসরি দেখতে বা ডাউনলোড করতে নিচের বাটনে ক্লিক করুন:</i>"
-        )
-        await processing_msg.edit_text(text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        await call.answer("You haven't joined all channels yet!", show_alert=True)
 
-# ==========================================
-# ওয়েব সার্ভার ও মেইন রানার (Web Server & Runner)
-# ==========================================
+# === 🔥 Admin Force Sub Control Commands ===
+@dp.message(Command("addsub"))
+async def add_fsub_cmd(message: types.Message):
+    if not await db.get_admin_role(message.from_user.id): return
+    try:
+        args = message.text.split()
+        channel_id = args[1] # e.g. @MyChannel
+        channel_url = args[2] # e.g. https://t.me/MyChannel
+        await db.add_fsub(channel_id, channel_url)
+        await message.answer(f"✅ চ্যানেল <b>{channel_id}</b> সফলভাবে ফোরস সাবস্ক্রাইবে অ্যাড করা হয়েছে!", parse_mode=ParseMode.HTML)
+    except:
+        await message.answer("⚠️ সঠিক নিয়ম: `/addsub @ChannelUsername https://t.me/ChannelLink`", parse_mode=ParseMode.Markdown)
 
+@dp.message(Command("delsub"))
+async def del_fsub_cmd(message: types.Message):
+    if not await db.get_admin_role(message.from_user.id): return
+    try:
+        channel_id = message.text.split()[1]
+        await db.remove_fsub(channel_id)
+        await message.answer(f"🗑️ চ্যানেল <b>{channel_id}</b> ডাটাবেস থেকে মুছে ফেলা হয়েছে!", parse_mode=ParseMode.HTML)
+    except:
+        await message.answer("⚠️ সঠিক নিয়ম: `/delsub @ChannelUsername`", parse_mode=ParseMode.Markdown)
+
+@dp.message(Command("channels"))
+async def list_fsub_cmd(message: types.Message):
+    if not await db.get_admin_role(message.from_user.id): return
+    channels = await db.get_all_fsubs()
+    if not channels:
+        await message.answer("ℹ️ কোনো ফোরস সাবস্ক্রাইব চ্যানেল অ্যাড করা নেই।")
+        return
+    text = "<b>লিংক করা চ্যানেলসমূহ:</b>\n\n"
+    for ch in channels: text += f"🔹 {ch['channel_id']} - {ch['channel_url']}\n"
+    await message.answer(text, parse_mode=ParseMode.HTML)
+
+# === Handle Terabox Links ===
+@dp.message(F.text.contains("terabox"))
+async def handle_link(message: types.Message):
+    missing = await get_missing_channels(message.from_user.id)
+    if missing:
+        markup = await fsub_markup(missing)
+        await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=markup, parse_mode=ParseMode.HTML)
+        return
+
+    msg = await message.answer("⏳ Wait 2-4 Seconds.")
+    link, size, title = await api.get_terabox_direct_link(message.text)
+    
+    if not link:
+        await msg.edit_text("❌ লিংকটি কাজ করছে না অথবা প্রাইভেট করা আছে।")
+        return
+    
+    if size and size <= 50 * 1024 * 1024:
+        await msg.edit_text("⏳ Downloading...")
+        file_path = f"{message.from_user.id}.mp4"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(link) as resp:
+                    with open(file_path, 'wb') as f: f.write(await resp.read())
+                    await bot.send_video(message.chat.id, FSInputFile(file_path), caption=title)
+                    os.remove(file_path)
+                    await msg.delete()
+        except:
+            await msg.edit_text("❌ ভিডিও পাঠাতে সমস্যা হয়েছে।")
+            if os.path.exists(file_path): os.remove(file_path)
+    else:
+        player_url = f"{config.WEBAPP_URL}/player.html?link={link}&title={title}"
+        markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="▶️ Watch & Download", web_app=WebAppInfo(url=player_url))]])
+        await msg.edit_text(f"📁 <b>{title}</b>\n\n⚠️ File is too large for Telegram. Watch or download below:", reply_markup=markup, parse_mode=ParseMode.HTML)
+
+# === Web Server ===
 async def web_server():
-    """aiohttp ওয়েব সার্ভার যা আপনার ওয়েবসাইট হোস্ট করবে"""
     app = web.Application()
-    
-    # ফোল্ডারগুলো না থাকলে তৈরি করবে (ক্র্যাশ রোধ করতে)
-    os.makedirs("web/admin", exist_ok=True)
-    os.makedirs("web/player", exist_ok=True)
-    
-    # স্ট্যাটিক ফোল্ডার রাউটিং
-    app.router.add_static('/admin', 'web/admin', name='admin')
-    app.router.add_static('/player', 'web/player', name='player')
-    
-    # মেইন ডোমেইন হিট করলে মেসেজ দেখাবে
-    async def index(request):
-        return web.Response(text="✅ Terabox Bot & Web Server is Running!")
-    app.router.add_get('/', index)
-    
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080)
-    await site.start()
-    print("🌐 Web Server is running on http://0.0.0.0:8080")
+    await web.TCPSite(runner, '0.0.0.0', int(os.environ.get("PORT", 8080))).start()
 
 async def main():
-    """বট এবং ওয়েব সার্ভার একসাথে চালু করার ফাংশন"""
-    await db.init_db() # ডেটাবেস ইনিশিয়ালাইজেশন
-    print("🤖 Telegram Bot is starting...")
-    
-    # asyncio.gather দিয়ে দুটো প্রসেস একসাথে চালানো হচ্ছে
-    await asyncio.gather(
-        dp.start_polling(bot),
-        web_server()
-    )
+    await db.init_db()
+    await asyncio.gather(dp.start_polling(bot), web_server())
 
 if __name__ == "__main__":
     asyncio.run(main())
