@@ -1,9 +1,24 @@
 const tg = window.Telegram.WebApp; 
 tg.expand();
 
+const sidebar = document.querySelector('.sidebar');
+const menuToggle = document.getElementById('menuToggle');
+
 // Sidebar toggle for mobile
-document.getElementById('menuToggle').addEventListener('click', () => {
-    document.querySelector('.sidebar').classList.toggle('active');
+menuToggle.addEventListener('click', (e) => {
+    e.stopPropagation(); // বাটনে ক্লিক করলে যেন সাথে সাথে বন্ধ না হয়ে যায়
+    sidebar.classList.toggle('active');
+});
+
+// খালি জায়গায় (Outside) ক্লিক করলে সাইডবার বন্ধ করার লজিক
+document.addEventListener('click', (e) => {
+    // মোবাইল স্ক্রিন সাইজ (768px এর নিচে) হলে এবং সাইডবার ওপেন থাকলে
+    if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
+        // যদি ক্লিকটা সাইডবারের ভেতরে বা মেনু বাটনে না হয়
+        if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            sidebar.classList.remove('active');
+        }
+    }
 });
 
 const params = new URLSearchParams(window.location.search);
@@ -25,7 +40,7 @@ async function loadData() {
         const list = document.getElementById('subList');
         list.innerHTML = "";
         if(data.subs.length === 0) {
-            list.innerHTML = `<li style="justify-content:center; color:#94a3b8;">No channels added yet</li>`;
+            list.innerHTML = `<li style="justify-content:center; color:#94a3b8; border-left:none;">No channels added yet</li>`;
         } else {
             data.subs.forEach(sub => {
                 list.innerHTML += `
@@ -36,7 +51,7 @@ async function loadData() {
             });
         }
     } catch (e) {
-        console.error("Error loading data", e);
+        document.getElementById('userCount').innerText = "Error";
     }
 }
 
@@ -45,10 +60,15 @@ async function addSub() {
     const url = document.getElementById('chUrl').value;
     if(!id || !url) return tg.showAlert("Please fill both Channel ID and Link fields!");
     
-    tg.MainButton.text = "Saving Channel..."; tg.MainButton.show();
+    tg.MainButton.text = "Saving Channel..."; 
+    tg.MainButton.show();
+    
     await fetch(`${API_BASE}/api/add_sub`, {
-        method: 'POST', body: JSON.stringify({channel_id: id, channel_url: url}), headers: {'Content-Type': 'application/json'}
+        method: 'POST', 
+        body: JSON.stringify({channel_id: id, channel_url: url}), 
+        headers: {'Content-Type': 'application/json'}
     });
+    
     tg.MainButton.hide();
     document.getElementById('chId').value = "";
     document.getElementById('chUrl').value = "";
@@ -60,7 +80,9 @@ async function delSub(id) {
     tg.showConfirm(`Are you sure you want to remove ${id}?`, async function(confirmed) {
         if(confirmed) {
             await fetch(`${API_BASE}/api/del_sub`, {
-                method: 'POST', body: JSON.stringify({channel_id: id}), headers: {'Content-Type': 'application/json'}
+                method: 'POST', 
+                body: JSON.stringify({channel_id: id}), 
+                headers: {'Content-Type': 'application/json'}
             });
             loadData();
         }
@@ -73,10 +95,15 @@ async function sendBroadcast() {
     
     tg.showConfirm("Send this message to ALL users?", async function(confirmed) {
         if(confirmed) {
-            tg.MainButton.text = "Sending Broadcast..."; tg.MainButton.show();
+            tg.MainButton.text = "Sending Broadcast..."; 
+            tg.MainButton.show();
+            
             await fetch(`${API_BASE}/api/broadcast`, {
-                method: 'POST', body: JSON.stringify({message: msg}), headers: {'Content-Type': 'application/json'}
+                method: 'POST', 
+                body: JSON.stringify({message: msg}), 
+                headers: {'Content-Type': 'application/json'}
             });
+            
             tg.showAlert("✅ Broadcast Sent Successfully!");
             tg.MainButton.hide();
             document.getElementById('bMsg').value = "";
