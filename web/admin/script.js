@@ -1,7 +1,6 @@
 const tg = window.Telegram.WebApp; 
 tg.expand();
 
-// URL থেকে Railway-এর ব্যাকএন্ড লিংক নেওয়া
 const params = new URLSearchParams(window.location.search);
 const API_BASE = params.get('api') || "";
 
@@ -29,7 +28,9 @@ async function addSub() {
         method: 'POST', body: JSON.stringify({channel_id: id, channel_url: url}), headers: {'Content-Type': 'application/json'}
     });
     tg.MainButton.hide();
-    loadData(); // রিলোড লিস্ট
+    document.getElementById('chId').value = "";
+    document.getElementById('chUrl').value = "";
+    loadData();
 }
 
 async function delSub(id) {
@@ -55,5 +56,4 @@ async function sendBroadcast() {
     }
 }
 
-// পেজ ওপেন হওয়ার সাথে সাথে ডাটা লোড করবে
 loadData();
