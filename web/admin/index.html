@@ -30,7 +30,11 @@
                 <li id="nav-users" onclick="switchTab('users')"><i class="fa-solid fa-users"></i> Manage Users</li>
                 <li id="nav-admins" onclick="switchTab('admins')"><i class="fa-solid fa-user-tie"></i> Managers/Admins</li>
                 <li id="nav-forcesub" onclick="switchTab('forcesub')"><i class="fa-solid fa-shield-halved"></i> Force Subscribe</li>
-                <li id="nav-botsettings" onclick="switchTab('botsettings')"><i class="fa-solid fa-gears"></i> Help & Plans</li>
+                
+                <!-- 🔴 Help এবং Plan আলাদা করা হলো -->
+                <li id="nav-helpsettings" onclick="switchTab('helpsettings')"><i class="fa-solid fa-headset"></i> Help Settings</li>
+                <li id="nav-plansettings" onclick="switchTab('plansettings')"><i class="fa-solid fa-gem"></i> Subscription Plans</li>
+                
                 <li id="nav-broadcast" onclick="switchTab('broadcast')"><i class="fa-solid fa-bullhorn"></i> Broadcast</li>
             </ul>
         </aside>
@@ -46,33 +50,18 @@
             <!-- 🏠 HOME TAB -->
             <div id="view-home" class="view-section">
                 <div class="stats-grid">
-                    <div class="stat-card blue-gradient">
-                        <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
-                        <div class="stat-details"><p>Total Users</p><h2 id="totalUsers">0</h2></div>
-                    </div>
-                    <div class="stat-card green-gradient">
-                        <div class="stat-icon"><i class="fa-solid fa-user-check"></i></div>
-                        <div class="stat-details"><p>Active Users</p><h2 id="activeUsers">0</h2></div>
-                    </div>
-                    <div class="stat-card red-gradient">
-                        <div class="stat-icon"><i class="fa-solid fa-shield"></i></div>
-                        <div class="stat-details"><p>Force Sub Channels</p><h2 id="subCount">0</h2></div>
-                    </div>
+                    <div class="stat-card blue-gradient"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-details"><p>Total Users</p><h2 id="totalUsers">0</h2></div></div>
+                    <div class="stat-card green-gradient"><div class="stat-icon"><i class="fa-solid fa-user-check"></i></div><div class="stat-details"><p>Active Users</p><h2 id="activeUsers">0</h2></div></div>
+                    <div class="stat-card red-gradient"><div class="stat-icon"><i class="fa-solid fa-shield"></i></div><div class="stat-details"><p>Force Sub Channels</p><h2 id="subCount">0</h2></div></div>
                 </div>
             </div>
 
             <!-- 👥 USERS TAB -->
             <div id="view-users" class="view-section" style="display: none;">
                 <div class="manage-card">
-                    <div class="card-header">
-                        <div class="icon-box"><i class="fa-solid fa-users"></i></div>
-                        <div><h3>Users & VIP Management</h3><p>See who is active and assign VIP roles.</p></div>
-                    </div>
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-users"></i></div><div><h3>Users & VIP Management</h3></div></div>
                     <div style="overflow-x: auto;">
-                        <table>
-                            <thead><tr><th>User ID</th><th>Status</th><th>VIP Membership</th></tr></thead>
-                            <tbody id="usersTableBody"><tr><td colspan="3">Loading users...</td></tr></tbody>
-                        </table>
+                        <table><thead><tr><th>User ID</th><th>Status</th><th>VIP Membership</th></tr></thead><tbody id="usersTableBody"></tbody></table>
                     </div>
                 </div>
             </div>
@@ -80,14 +69,8 @@
             <!-- 👑 ADMINS TAB -->
             <div id="view-admins" class="view-section" style="display: none;">
                 <div class="manage-card">
-                    <div class="card-header">
-                        <div class="icon-box"><i class="fa-solid fa-user-tie"></i></div>
-                        <div><h3>Manager & Admin Option</h3><p>Add co-owners or managers.</p></div>
-                    </div>
-                    <div class="input-group">
-                        <label>User ID</label>
-                        <input type="number" id="adminId" placeholder="Enter Telegram User ID">
-                    </div>
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-user-tie"></i></div><div><h3>Manager & Admin Option</h3></div></div>
+                    <div class="input-group"><label>User ID</label><input type="number" id="adminId" placeholder="Enter Telegram User ID"></div>
                     <div class="input-group">
                         <label>Select Role</label>
                         <div class="role-selector">
@@ -98,62 +81,53 @@
                         </div>
                     </div>
                     <button onclick="addAdmin()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Add Admin</button>
-                    <h4 style="margin-top: 25px;">Current Admins</h4>
-                    <ul id="adminList" class="channel-list"></ul>
+                    <h4 style="margin-top: 25px;">Current Admins</h4><ul id="adminList" class="channel-list"></ul>
                 </div>
             </div>
 
             <!-- 🛡️ FORCE SUB TAB -->
             <div id="view-forcesub" class="view-section" style="display: none;">
                 <div class="manage-card">
-                    <div class="card-header">
-                        <div class="icon-box"><i class="fa-solid fa-shield-halved"></i></div>
-                        <div><h3>Force Subscribe</h3><p>Users must subscribe to use bot</p></div>
-                    </div>
-                    <div class="input-group">
-                        <label>Channel ID (@username)</label>
-                        <input type="text" id="chId" placeholder="e.g. @YK_King_Flim">
-                    </div>
-                    <div class="input-group">
-                        <label>Channel Link</label>
-                        <input type="text" id="chUrl" placeholder="https://t.me/...">
-                    </div>
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-shield-halved"></i></div><div><h3>Force Subscribe</h3></div></div>
+                    <div class="input-group"><label>Channel ID (@username)</label><input type="text" id="chId"></div>
+                    <div class="input-group"><label>Channel Link</label><input type="text" id="chUrl"></div>
                     <button onclick="addSub()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Add Channel</button>
                     <ul id="subList" class="channel-list" style="margin-top:20px;"></ul>
                 </div>
             </div>
 
-            <!-- ⚙️ HELP & PLANS SETTINGS TAB -->
-            <div id="view-botsettings" class="view-section" style="display: none;">
+            <!-- 📞 HELP SETTINGS TAB -->
+            <div id="view-helpsettings" class="view-section" style="display: none;">
                 <div class="manage-card">
-                    <div class="card-header">
-                        <div class="icon-box"><i class="fa-solid fa-gears"></i></div>
-                        <div><h3>Help & Plan Configuration</h3><p>Control what users see when they click Help or Plan.</p></div>
-                    </div>
-                    
-                    <h4 style="margin-bottom: 12px; color: var(--primary);">📞 Help & Social Links (Leave empty to hide)</h4>
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-headset"></i></div><div><h3>Help Settings</h3><p>Manage support links (leave empty to hide).</p></div></div>
                     <div class="input-group"><label>Support Email</label><input type="text" id="helpEmail" placeholder="support@domain.com"></div>
                     <div class="input-group"><label>Facebook Profile/Page</label><input type="text" id="helpFb" placeholder="https://facebook.com/..."></div>
                     <div class="input-group"><label>Telegram Contact/Username</label><input type="text" id="helpTg" placeholder="@username or link"></div>
                     <div class="input-group"><label>WhatsApp Number/Link</label><input type="text" id="helpWa" placeholder="+8801..."></div>
+                    <button onclick="saveHelpSettings()" class="btn-primary w-100"><i class="fa-solid fa-save"></i> Save Links</button>
+                </div>
+            </div>
 
-                    <h4 style="margin: 25px 0 12px; color: var(--primary);">💎 Subscription Plan Text</h4>
-                    <div class="input-group">
-                        <label>Plan Details (Supports HTML formatting)</label>
-                        <textarea id="planText" rows="6" placeholder="Write pricing and plans here..."></textarea>
-                    </div>
-
-                    <button onclick="saveSettings()" class="btn-primary w-100"><i class="fa-solid fa-save"></i> Save Settings</button>
+            <!-- 💎 SUBSCRIPTION PLANS TAB (New Dynamic Creator) -->
+            <div id="view-plansettings" class="view-section" style="display: none;">
+                <div class="manage-card">
+                    <div class="card-header"><div class="icon-box"><i class="fa-solid fa-gem"></i></div><div><h3>Subscription Plans</h3><p>Create completely custom premium plans.</p></div></div>
+                    
+                    <div class="input-group"><label>Plan Name (e.g. VIP Member)</label><input type="text" id="pName" placeholder="Enter Plan Name"></div>
+                    <div class="input-group"><label>Duration (e.g. 1 Day, 1 Week, 1 Month, Lifetime)</label><input type="text" id="pDuration" placeholder="Enter Duration"></div>
+                    <div class="input-group"><label>Price (e.g. 50 BDT, Free, $5)</label><input type="text" id="pPrice" placeholder="Enter Price"></div>
+                    
+                    <button onclick="addPlan()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Create Plan</button>
+                    
+                    <h4 style="margin-top: 25px; color: var(--primary);">Active Plans in Bot</h4>
+                    <ul id="planList" class="channel-list"></ul>
                 </div>
             </div>
 
             <!-- 📢 BROADCAST TAB -->
             <div id="view-broadcast" class="view-section" style="display: none;">
                 <div class="manage-card">
-                    <div class="card-header">
-                        <div class="icon-box purple-bg"><i class="fa-solid fa-bullhorn"></i></div>
-                        <div><h3>Advanced Broadcast</h3><p>Send message to specific groups or users.</p></div>
-                    </div>
+                    <div class="card-header"><div class="icon-box purple-bg"><i class="fa-solid fa-bullhorn"></i></div><div><h3>Advanced Broadcast</h3></div></div>
                     <div class="input-group">
                         <label>Target Audience</label>
                         <div class="role-selector">
@@ -162,6 +136,20 @@
                             <input type="radio" id="bVip" name="bType" value="vip" onchange="toggleSpecificInput()">
                             <label for="bVip" class="role-btn">⭐ VIPs</label>
                             <input type="radio" id="bSpecific" name="bType" value="specific" onchange="toggleSpecificInput()">
+                            <label for="bSpecific" class="role-btn">🎯 Target ID</label>
+                        </div>
+                    </div>
+                    <div class="input-group" id="specificIdDiv" style="display: none;"><label>Enter Specific User ID</label><input type="number" id="bTargetId"></div>
+                    <div class="input-group mt-3"><label>Message Text</label><textarea id="bMsg" rows="6"></textarea></div>
+                    <button onclick="sendBroadcast()" class="btn-purple w-100"><i class="fa-solid fa-paper-plane"></i> Send Message</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>ue="specific" onchange="toggleSpecificInput()">
                             <label for="bSpecific" class="role-btn">🎯 Target ID</label>
                         </div>
                     </div>
