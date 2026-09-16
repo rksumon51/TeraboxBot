@@ -14,7 +14,6 @@ import api_handler as api
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher()
 
-# --- Force Sub Check ---
 async def get_missing_channels(user_id):
     missing = []
     channels = await db.get_all_fsubs()
@@ -32,7 +31,6 @@ async def fsub_markup(missing_channels):
     markup.inline_keyboard.append([InlineKeyboardButton(text="✅ Joined", callback_data="verify_join")])
     return markup
 
-# --- Bot Commands ---
 @dp.message(CommandStart())
 async def send_welcome(message: types.Message):
     await db.get_user(message.from_user.id)
@@ -57,13 +55,13 @@ async def verify_join_callback(call: types.CallbackQuery):
 async def admin_panel(message: types.Message):
     role = await db.get_admin_role(message.from_user.id)
     if not role: return
-    # Railway-এর URL প্যানেলে পাঠানোর লজিক
-    railway_url = os.environ.get("RAILWAY_STATIC_URL", "http://localhost:8080")
-    if "up.railway.app" not in railway_url: railway_url = config.WEBAPP_URL # Fallback
+    
+    railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+    railway_url = f"https://{railway_domain}" if railway_domain else "http://localhost:8080"
     
     admin_url = f"{config.WEBAPP_URL}/admin/index.html?api={railway_url}"
-    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🌐 Open Web Panel", web_app=WebAppInfo(url=admin_url))]])
-    await message.answer("🔐 <b>Admin Dashboard</b>\nএখান থেকে সবকিছু কন্ট্রোল করুন:", reply_markup=markup, parse_mode=ParseMode.HTML)
+    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🌐 Open Admin Panel", web_app=WebAppInfo(url=admin_url))]])
+    await message.answer("🔐 <b>Admin Dashboard</b>\n\nএখান থেকে সবকিছু কন্ট্রোল করুন:", reply_markup=markup, parse_mode=ParseMode.HTML)
 
 @dp.message(F.text.contains("terabox"))
 async def handle_link(message: types.Message):
@@ -94,9 +92,8 @@ async def handle_link(message: types.Message):
         markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="▶️ Watch & Download", web_app=WebAppInfo(url=player_url))]])
         await msg.edit_text(f"📁 <b>{title}</b>\n\n⚠️ File is too large. Watch below:", reply_markup=markup, parse_mode=ParseMode.HTML)
 
-# --- Web Panel APIs (Railway Backend) ---
+# === API Routes for Web Panel ===
 def cors_headers(): return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
-
 async def options_handler(request): return web.Response(headers=cors_headers())
 
 async def api_get_stats(request):
@@ -124,14 +121,21 @@ async def api_broadcast(request):
         except: pass
     return web.json_response({"status": "ok"}, headers=cors_headers())
 
+async def api_add_admin(request):
+    data = await request.json()
+    success = await db.add_new_admin(int(data['user_id']), data['role'])
+    if success:
+        return web.json_response({"status": "ok"}, headers=cors_headers())
+    return web.json_response({"status": "error"}, headers=cors_headers())
+
 async def web_server():
     app = web.Application()
-    # API Routes
     app.router.add_options('/api/{tail:.*}', options_handler)
     app.router.add_get('/api/stats', api_get_stats)
     app.router.add_post('/api/add_sub', api_add_sub)
     app.router.add_post('/api/del_sub', api_del_sub)
     app.router.add_post('/api/broadcast', api_broadcast)
+    app.router.add_post('/api/add_admin', api_add_admin) # New Route
     
     runner = web.AppRunner(app)
     await runner.setup()
