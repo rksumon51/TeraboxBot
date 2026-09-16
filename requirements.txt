@@ -2,3 +2,4 @@ aiogram
 motor
 aiohttp
 python-dotenv
+cloudscraper
