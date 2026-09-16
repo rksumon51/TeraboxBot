@@ -34,6 +34,11 @@ async function loadData() {
             document.getElementById('helpFb').value = data.settings.help_fb || "";
             document.getElementById('helpTg').value = data.settings.help_tg || "";
             document.getElementById('helpWa').value = data.settings.help_wa || "";
+            // 🔴 Payment Data Fill
+            document.getElementById('payBkash').value = data.settings.pay_bkash || "";
+            document.getElementById('payNagad').value = data.settings.pay_nagad || "";
+            document.getElementById('payRocket').value = data.settings.pay_rocket || "";
+            document.getElementById('payCrypto').value = data.settings.pay_crypto || "";
         }
         
         const tbody = document.getElementById('usersTableBody');
@@ -59,7 +64,6 @@ async function loadData() {
                 <button class="delete-btn" onclick="delSub('${sub.id}')"><i class="fa-solid fa-trash"></i></button></li>`;
         });
 
-        // 🔴 Dynamic Plan List Update
         const pList = document.getElementById('planList');
         pList.innerHTML = "";
         if(data.plans.length === 0) pList.innerHTML = `<li style="justify-content:center; color:#94a3b8; border:none;">No plans created yet</li>`;
@@ -90,13 +94,26 @@ async function saveHelpSettings() {
     tg.showAlert("✅ Help settings saved successfully!");
 }
 
+async function savePaymentSettings() {
+    const paymentData = {
+        pay_bkash: document.getElementById('payBkash').value,
+        pay_nagad: document.getElementById('payNagad').value,
+        pay_rocket: document.getElementById('payRocket').value,
+        pay_crypto: document.getElementById('payCrypto').value
+    };
+    tg.MainButton.text = "Saving Methods..."; tg.MainButton.show();
+    await fetch(`${API_BASE}/api/update_settings`, { method: 'POST', body: JSON.stringify(paymentData), headers: {'Content-Type': 'application/json'} });
+    tg.MainButton.hide();
+    tg.showAlert("✅ Payment Methods saved successfully!");
+}
+
 async function addPlan() {
     const name = document.getElementById('pName').value;
     const duration = document.getElementById('pDuration').value;
     const price = document.getElementById('pPrice').value;
     if(!name || !duration || !price) return tg.showAlert("Please fill all plan fields!");
     
-    const planId = "plan_" + Date.now(); // Unique ID for database
+    const planId = "plan_" + Date.now(); 
     
     tg.MainButton.text = "Creating Plan..."; tg.MainButton.show();
     await fetch(`${API_BASE}/api/add_plan`, { 
