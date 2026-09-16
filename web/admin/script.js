@@ -3,7 +3,6 @@ const API_BASE = "https://worker-production-0420.up.railway.app";
 const tg = window.Telegram.WebApp; 
 tg.expand();
 
-// Sidebar Logic
 const sidebar = document.querySelector('.sidebar');
 const menuToggle = document.getElementById('menuToggle');
 menuToggle.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.toggle('active'); });
@@ -26,12 +25,19 @@ async function loadData() {
         const res = await fetch(`${API_BASE}/api/stats`);
         const data = await res.json();
         
-        // Stats
         document.getElementById('totalUsers').innerText = data.total_users;
         document.getElementById('activeUsers').innerText = data.active_users;
         document.getElementById('subCount').innerText = data.subs.length;
         
-        // Users & VIP Table
+        // Settings Data Fill
+        if(data.settings) {
+            document.getElementById('helpEmail').value = data.settings.help_email || "";
+            document.getElementById('helpFb').value = data.settings.help_fb || "";
+            document.getElementById('helpTg').value = data.settings.help_tg || "";
+            document.getElementById('helpWa').value = data.settings.help_wa || "";
+            document.getElementById('planText').value = data.settings.plan_text || "";
+        }
+        
         const tbody = document.getElementById('usersTableBody');
         tbody.innerHTML = "";
         data.users_list.forEach(u => {
@@ -45,7 +51,6 @@ async function loadData() {
             </tr>`;
         });
 
-        // Admins List
         const adminList = document.getElementById('adminList');
         adminList.innerHTML = "";
         data.admins.forEach(a => {
@@ -56,7 +61,6 @@ async function loadData() {
             }
         });
         
-        // Channels List
         const list = document.getElementById('subList');
         list.innerHTML = "";
         data.subs.forEach(sub => {
@@ -68,6 +72,23 @@ async function loadData() {
     }
 }
 
+async function saveSettings() {
+    const settingsData = {
+        help_email: document.getElementById('helpEmail').value,
+        help_fb: document.getElementById('helpFb').value,
+        help_tg: document.getElementById('helpTg').value,
+        help_wa: document.getElementById('helpWa').value,
+        plan_text: document.getElementById('planText').value
+    };
+
+    tg.MainButton.text = "Saving Settings..."; tg.MainButton.show();
+    await fetch(`${API_BASE}/api/update_settings`, {
+        method: 'POST', body: JSON.stringify(settingsData), headers: {'Content-Type': 'application/json'}
+    });
+    tg.MainButton.hide();
+    tg.showAlert("✅ Help & Plan settings saved successfully!");
+}
+
 async function toggleVIP(userId, status) {
     await fetch(`${API_BASE}/api/toggle_vip`, { method: 'POST', body: JSON.stringify({user_id: userId, vip: status}), headers: {'Content-Type': 'application/json'} });
     loadData();
@@ -76,7 +97,6 @@ async function toggleVIP(userId, status) {
 async function addAdmin() {
     const id = document.getElementById('adminId').value;
     const role = document.querySelector('input[name="adminRole"]:checked').value; 
-    
     if(!id) return tg.showAlert("Enter Admin User ID!");
     await fetch(`${API_BASE}/api/add_admin`, { method: 'POST', body: JSON.stringify({user_id: id, role: role}), headers: {'Content-Type': 'application/json'} });
     document.getElementById('adminId').value = "";
@@ -106,7 +126,6 @@ async function delSub(id) {
 }
 
 function toggleSpecificInput() {
-    // 🔴 পপআপের বদলে এখন সিলেক্ট করা বাটন থেকে ডাটা নিবে
     const type = document.querySelector('input[name="bType"]:checked').value;
     document.getElementById('specificIdDiv').style.display = (type === 'specific') ? 'block' : 'none';
 }
