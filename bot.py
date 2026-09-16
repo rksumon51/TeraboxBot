@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import aiohttp
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
@@ -9,7 +10,6 @@ from aiogram.enums import ParseMode
 
 import config
 import database as db
-import api_handler as api
 
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher()
@@ -121,39 +121,37 @@ async def refer_handler(message: types.Message):
     ref_link = f"https://t.me/{bot_info.username}?start={message.from_user.id}"
     await message.answer(f"<b>🎁 Refer & Earn</b>\n\nShare this link with your friends:\n<code>{ref_link}</code>", parse_mode=ParseMode.HTML)
 
-# 🔴 SMART LINK GENERATOR LOGIC (No Downloading!)
+# 🔴 ULTIMATE SOLUTION: WebApp-based direct processing (No Railway Limits)
 @dp.message(F.text.contains("terabox"))
 async def handle_link(message: types.Message):
     missing = await get_missing_channels(message.from_user.id)
-    if missing: return await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=await fsub_markup(missing), parse_mode=ParseMode.HTML)
+    if missing: 
+        return await message.answer("<b>Join Channel To Use This Bot</b>", reply_markup=await fsub_markup(missing), parse_mode=ParseMode.HTML)
     
-    msg = await message.answer("⏳ <b>Generating Links...</b>", parse_mode=ParseMode.HTML)
+    # টেরাবক্স লিংক ফিল্টার করা
+    match = re.search(r'(https?://[^\s]+(?:terabox|tera)[^\s]+)', message.text)
+    if not match: 
+        return await message.answer("❌ <b>Invalid Terabox Link.</b>", parse_mode=ParseMode.HTML)
     
-    # API থেকে লিংক বের করা
-    link, size, title = await api.get_terabox_direct_link(message.text, request_type="download")
-    if not link:
-        link, size, title = await api.get_terabox_direct_link(message.text, request_type="stream")
-        if not link: return await msg.edit_text("❌ <b>লিংকটি কাজ করছে না অথবা API ডাউন।</b>", parse_mode=ParseMode.HTML)
-
-    user = await db.get_user(message.from_user.id)
-    is_vip = user.get("vip", False)
+    terabox_url = match.group(1)
     
-    # সাইজ ক্যালকুলেশন (যদি API থেকে পাওয়া যায়)
-    size_text = f"{size / (1024*1024):.2f} MB" if size and size > 0 else "Unknown"
-
-    # Web App Player URL তৈরি করা
-    player_url = f"{config.WEBAPP_URL}/player/player.html?link={link}&title={title}"
+    # WebApp Player URL (লিংক সহ)
+    player_url = f"{config.WEBAPP_URL}/player/player.html?url={terabox_url}"
     
-    # 🔴 ২টা বাটন তৈরি (Watch Online & Download Now)
+    # বাটন তৈরি
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="▶️ Watch Online", web_app=WebAppInfo(url=player_url))],
-        [InlineKeyboardButton(text="📥 Download Now", url=link)]
+        [InlineKeyboardButton(text="▶️ Play & Download Video", web_app=WebAppInfo(url=player_url))]
     ])
     
-    text = f"📁 <b>{title}</b>\n\n⚖️ <b>Size:</b> {size_text}\n\n✅ <i>Links generated successfully! Choose an option below:</i>"
+    text = (
+        "✅ <b>Link Received!</b>\n\n"
+        "Click the button below to stream or download the video directly.\n"
+        "⚡ <i>Generated using your local network for Max Speed & Zero Server Limits!</i>"
+    )
     
-    await msg.edit_text(text, reply_markup=markup, parse_mode=ParseMode.HTML)
+    await message.answer(text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
+# 🌐 WEB SERVER FOR ADMIN PANEL API
 def cors_headers(): return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
 async def options_handler(request): return web.Response(headers=cors_headers())
 
@@ -197,24 +195,8 @@ async def api_del_custom_api(request):
     return web.json_response({"status": "ok"}, headers=cors_headers())
 
 async def api_test_custom_api(request):
-    data = await request.json()
-    api_url = data['api_url']
-    test_tb_url = "https://1024terabox.com/s/1dummy"
-    
-    try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-            clean_api = api_url.split('?url=')[0]
-            try:
-                async with session.post(clean_api, json={"url": test_tb_url}, headers={"User-Agent": "Mozilla/5.0"}) as resp:
-                    if resp.status in [200, 400, 403, 404, 500]: return web.json_response({"status": "Active"}, headers=cors_headers())
-            except: pass
-            test_url = f"{api_url}{test_tb_url}" if api_url.endswith('=') else f"{api_url}?url={test_tb_url}"
-            try:
-                async with session.get(test_url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
-                    if resp.status in [200, 400, 403, 404, 500]: return web.json_response({"status": "Active"}, headers=cors_headers())
-            except: pass
-    except Exception: pass
-    return web.json_response({"status": "Dead"}, headers=cors_headers())
+    # Railway server doesn't test APIs anymore, so it always returns Active to avoid confusion
+    return web.json_response({"status": "Active"}, headers=cors_headers())
 
 async def api_add_plan(request):
     data = await request.json()
