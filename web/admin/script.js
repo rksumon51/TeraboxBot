@@ -1,127 +1,135 @@
-// 🔴 আপনার Railway-এর ডোমেইন লিংকটি এখানে দিন (অবশ্যই https:// সহ এবং শেষে / ছাড়া):
 const API_BASE = "https://worker-production-0420.up.railway.app"; 
 
 const tg = window.Telegram.WebApp; 
 tg.expand();
 
-// === Sidebar & Tab Logic ===
+// Sidebar Logic
 const sidebar = document.querySelector('.sidebar');
 const menuToggle = document.getElementById('menuToggle');
-
-menuToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    sidebar.classList.toggle('active');
-});
-
-// স্ক্রিনের খালি জায়গায় ক্লিক করলে সাইডবার বন্ধ হবে
+menuToggle.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.toggle('active'); });
 document.addEventListener('click', (e) => {
     if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
-        if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-            sidebar.classList.remove('active');
-        }
+        if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) sidebar.classList.remove('active');
     }
 });
 
-// মেনু বাটন দিয়ে পেজ (Tab) চেঞ্জ করার লজিক
 function switchTab(tabName) {
-    // সব ট্যাব হাইড করো
-    document.getElementById('view-home').style.display = 'none';
-    document.getElementById('view-forcesub').style.display = 'none';
-    document.getElementById('view-broadcast').style.display = 'none';
-    
-    // সব মেনু থেকে active ক্লাস সরাও
-    document.getElementById('nav-home').classList.remove('active');
-    document.getElementById('nav-forcesub').classList.remove('active');
-    document.getElementById('nav-broadcast').classList.remove('active');
-    
-    // শুধু সিলেক্ট করা ট্যাব শো করো
+    document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.nav-menu li').forEach(el => el.classList.remove('active'));
     document.getElementById(`view-${tabName}`).style.display = 'block';
     document.getElementById(`nav-${tabName}`).classList.add('active');
-    
-    // মোবাইলে ক্লিক করার পর সাইডবার নিজে থেকেই বন্ধ হয়ে যাবে
-    if (window.innerWidth <= 768) {
-        sidebar.classList.remove('active');
-    }
+    if (window.innerWidth <= 768) sidebar.classList.remove('active');
 }
 
-// === Data Loading & APIs ===
 async function loadData() {
-    if (API_BASE.includes("এখানে-আপনার-রেলওয়ের-লিংক-দিন")) {
-        document.getElementById('userCount').innerText = "Link Missing!";
-        return tg.showAlert("⚠️ দয়া করে script.js ফাইলে আপনার Railway লিংকটি বসান!");
-    }
-    
     try {
         const res = await fetch(`${API_BASE}/api/stats`);
         const data = await res.json();
         
-        document.getElementById('userCount').innerText = data.users.toLocaleString();
-        document.getElementById('activeUserCount').innerText = Math.floor(data.users * 0.85).toLocaleString();
+        // Stats
+        document.getElementById('totalUsers').innerText = data.total_users;
+        document.getElementById('activeUsers').innerText = data.active_users; // রিয়েল অ্যাক্টিভ ইউজার
         document.getElementById('subCount').innerText = data.subs.length;
-        document.getElementById('broadcastBadge').innerText = `Total Users: ${data.users.toLocaleString()}`;
         
+        // Users & VIP Table
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = "";
+        data.users_list.forEach(u => {
+            const statusHtml = u.active ? `<span class="status-dot"></span> Active` : `<span class="status-dot status-dead"></span> Blocked/Dead`;
+            const vipClass = u.vip ? "vip-active" : "vip-inactive";
+            const vipText = u.vip ? "⭐ VIP Member" : "Make VIP";
+            tbody.innerHTML += `<tr>
+                <td>${u.id}</td>
+                <td>${statusHtml}</td>
+                <td><button class="vip-btn ${vipClass}" onclick="toggleVIP(${u.id}, ${!u.vip})">${vipText}</button></td>
+            </tr>`;
+        });
+
+        // Admins List
+        const adminList = document.getElementById('adminList');
+        adminList.innerHTML = "";
+        data.admins.forEach(a => {
+            if(a.role === "Primary Owner") {
+                adminList.innerHTML += `<li><span>👑 ${a.id} (${a.role})</span></li>`;
+            } else {
+                adminList.innerHTML += `<li><span>👤 ${a.id} (${a.role})</span> <button class="delete-btn" onclick="delAdmin(${a.id})"><i class="fa-solid fa-trash"></i></button></li>`;
+            }
+        });
+        
+        // Channels List
         const list = document.getElementById('subList');
         list.innerHTML = "";
-        if(data.subs.length === 0) {
-            list.innerHTML = `<li style="justify-content:center; color:#94a3b8; border-left:none;">No channels added yet</li>`;
-        } else {
-            data.subs.forEach(sub => {
-                list.innerHTML += `
-                    <li>
-                        <span><i class="fa-brands fa-telegram" style="color:#2563eb; margin-right:8px;"></i> ${sub.id}</span>
-                        <button class="delete-btn" onclick="delSub('${sub.id}')"><i class="fa-solid fa-trash"></i></button>
-                    </li>`;
-            });
-        }
+        data.subs.forEach(sub => {
+            list.innerHTML += `<li><span><i class="fa-brands fa-telegram" style="color:#2563eb; margin-right:8px;"></i> ${sub.id}</span>
+                <button class="delete-btn" onclick="delSub('${sub.id}')"><i class="fa-solid fa-trash"></i></button></li>`;
+        });
     } catch (e) {
-        document.getElementById('userCount').innerText = "API Error";
-        tg.showAlert("⚠️ Railway সার্ভারের সাথে কানেক্ট করা যাচ্ছে না। লিংকটি চেক করুন।");
+        tg.showAlert("API Error! Railway লিংকটি সঠিক আছে কিনা চেক করুন।");
     }
+}
+
+async function toggleVIP(userId, status) {
+    await fetch(`${API_BASE}/api/toggle_vip`, { method: 'POST', body: JSON.stringify({user_id: userId, vip: status}), headers: {'Content-Type': 'application/json'} });
+    loadData();
+}
+
+async function addAdmin() {
+    const id = document.getElementById('adminId').value;
+    const role = document.getElementById('adminRole').value;
+    if(!id) return tg.showAlert("Enter Admin User ID!");
+    await fetch(`${API_BASE}/api/add_admin`, { method: 'POST', body: JSON.stringify({user_id: id, role: role}), headers: {'Content-Type': 'application/json'} });
+    document.getElementById('adminId').value = "";
+    loadData();
+    tg.showAlert("Admin Added!");
+}
+
+async function delAdmin(id) {
+    if(!confirm("Remove this admin?")) return;
+    await fetch(`${API_BASE}/api/del_admin`, { method: 'POST', body: JSON.stringify({user_id: id}), headers: {'Content-Type': 'application/json'} });
+    loadData();
 }
 
 async function addSub() {
     const id = document.getElementById('chId').value;
     const url = document.getElementById('chUrl').value;
-    if(!id || !url) return tg.showAlert("Please fill both Channel ID and Link fields!");
-    
-    tg.MainButton.text = "Saving Channel..."; tg.MainButton.show();
-    await fetch(`${API_BASE}/api/add_sub`, {
-        method: 'POST', body: JSON.stringify({channel_id: id, channel_url: url}), headers: {'Content-Type': 'application/json'}
-    });
-    tg.MainButton.hide();
-    document.getElementById('chId').value = "";
-    document.getElementById('chUrl').value = "";
+    if(!id || !url) return;
+    await fetch(`${API_BASE}/api/add_sub`, { method: 'POST', body: JSON.stringify({channel_id: id, channel_url: url}), headers: {'Content-Type': 'application/json'} });
+    document.getElementById('chId').value = ""; document.getElementById('chUrl').value = "";
     loadData();
-    tg.showAlert("✅ Channel added successfully!");
 }
 
 async function delSub(id) {
-    tg.showConfirm(`Are you sure you want to remove ${id}?`, async function(confirmed) {
-        if(confirmed) {
-            await fetch(`${API_BASE}/api/del_sub`, {
-                method: 'POST', body: JSON.stringify({channel_id: id}), headers: {'Content-Type': 'application/json'}
-            });
-            loadData();
-        }
-    });
+    if(!confirm(`Remove ${id}?`)) return;
+    await fetch(`${API_BASE}/api/del_sub`, { method: 'POST', body: JSON.stringify({channel_id: id}), headers: {'Content-Type': 'application/json'} });
+    loadData();
+}
+
+function toggleSpecificInput() {
+    const type = document.getElementById('bType').value;
+    document.getElementById('specificIdDiv').style.display = (type === 'specific') ? 'block' : 'none';
 }
 
 async function sendBroadcast() {
     const msg = document.getElementById('bMsg').value;
-    if(!msg) return tg.showAlert("Broadcast message cannot be empty!");
+    const type = document.getElementById('bType').value;
+    const targetId = document.getElementById('bTargetId').value;
     
-    tg.showConfirm("Send this message to ALL users?", async function(confirmed) {
+    if(!msg) return tg.showAlert("Message cannot be empty!");
+    if(type === 'specific' && !targetId) return tg.showAlert("Enter target User ID!");
+    
+    tg.showConfirm(`Send message to ${type}?`, async function(confirmed) {
         if(confirmed) {
-            tg.MainButton.text = "Sending Broadcast..."; tg.MainButton.show();
+            tg.MainButton.text = "Sending..."; tg.MainButton.show();
             await fetch(`${API_BASE}/api/broadcast`, {
-                method: 'POST', body: JSON.stringify({message: msg}), headers: {'Content-Type': 'application/json'}
+                method: 'POST', 
+                body: JSON.stringify({message: msg, type: type, target_id: targetId}), 
+                headers: {'Content-Type': 'application/json'}
             });
-            tg.showAlert("✅ Broadcast Sent Successfully!");
+            tg.showAlert("✅ Message Sent!");
             tg.MainButton.hide();
             document.getElementById('bMsg').value = "";
         }
     });
 }
 
-// পেজ ওপেন হওয়ার সাথে সাথে ডাটা লোড করবে
 loadData();
