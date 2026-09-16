@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YK BOT - Admin Panel</title>
     <link rel="stylesheet" href="style.css">
-    <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -21,10 +20,10 @@
                 </div>
             </div>
             <ul class="nav-menu">
-                <li class="active"><i class="fa-solid fa-house"></i> Home</li>
-                <li><i class="fa-solid fa-users"></i> Users</li>
-                <li><i class="fa-solid fa-shield-halved"></i> Force Subscribe</li>
-                <li><i class="fa-solid fa-bullhorn"></i> Broadcast</li>
+                <!-- মেনু বাটনগুলোতে onclick যুক্ত করা হয়েছে -->
+                <li class="active" id="nav-home" onclick="switchTab('home')"><i class="fa-solid fa-house"></i> Home (Stats)</li>
+                <li id="nav-forcesub" onclick="switchTab('forcesub')"><i class="fa-solid fa-shield-halved"></i> Force Subscribe</li>
+                <li id="nav-broadcast" onclick="switchTab('broadcast')"><i class="fa-solid fa-bullhorn"></i> Broadcast</li>
             </ul>
             <div class="sidebar-footer">
                 <div class="footer-profile">
@@ -40,7 +39,6 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
             <header class="topbar">
                 <div class="topbar-left">
                     <button class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
@@ -60,98 +58,100 @@
                 </div>
             </header>
 
-            <!-- Top Stat Cards -->
-            <div class="stats-grid">
-                <div class="stat-card blue-gradient">
-                    <div class="stat-icon"><i class="fa-solid fa-user-large"></i></div>
-                    <div class="stat-details">
-                        <p>Total Users</p>
-                        <h2 id="userCount">0</h2>
+            <!-- 🏠 HOME TAB (Stats) -->
+            <div id="view-home" class="view-section">
+                <div class="stats-grid">
+                    <div class="stat-card blue-gradient">
+                        <div class="stat-icon"><i class="fa-solid fa-user-large"></i></div>
+                        <div class="stat-details">
+                            <p>Total Users</p>
+                            <h2 id="userCount">Loading...</h2>
+                        </div>
                     </div>
-                </div>
-                <div class="stat-card green-gradient">
-                    <div class="stat-icon"><i class="fa-solid fa-user-check"></i></div>
-                    <div class="stat-details">
-                        <p>Active Users</p>
-                        <h2 id="activeUserCount">0</h2>
+                    <div class="stat-card green-gradient">
+                        <div class="stat-icon"><i class="fa-solid fa-user-check"></i></div>
+                        <div class="stat-details">
+                            <p>Active Users</p>
+                            <h2 id="activeUserCount">0</h2>
+                        </div>
                     </div>
-                </div>
-                <div class="stat-card red-gradient">
-                    <div class="stat-icon"><i class="fa-solid fa-users-viewfinder"></i></div>
-                    <div class="stat-details">
-                        <p>Force Sub Channels</p>
-                        <h2 id="subCount">0</h2>
+                    <div class="stat-card red-gradient">
+                        <div class="stat-icon"><i class="fa-solid fa-users-viewfinder"></i></div>
+                        <div class="stat-details">
+                            <p>Force Sub Channels</p>
+                            <h2 id="subCount">0</h2>
+                        </div>
                     </div>
-                </div>
-                <div class="stat-card purple-gradient">
-                    <div class="stat-icon"><i class="fa-solid fa-user-plus"></i></div>
-                    <div class="stat-details">
-                        <p>Bot Status</p>
-                        <h2>Online</h2>
+                    <div class="stat-card purple-gradient">
+                        <div class="stat-icon"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="stat-details">
+                            <p>Bot Status</p>
+                            <h2>Online</h2>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Management Section -->
-            <div class="management-grid">
-                <!-- Force Subscribe Management -->
-                <div class="manage-card">
-                    <div class="card-header">
-                        <div class="icon-box"><i class="fa-solid fa-shield-halved"></i></div>
-                        <div>
-                            <h3>Force Subscribe Option</h3>
-                            <p>Users must subscribe to use bot</p>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="input-group">
-                            <label>Channel ID (@username)</label>
-                            <input type="text" id="chId" placeholder="e.g. @YK_King_Flim">
-                        </div>
-                        <div class="input-group">
-                            <label>Channel Link</label>
-                            <input type="text" id="chUrl" placeholder="https://t.me/...">
-                        </div>
-                        <button onclick="addSub()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Add Channel</button>
-                        
-                        <div class="active-channels-section">
-                            <h4>Active Channels</h4>
-                            <ul id="subList" class="channel-list">
-                                <!-- Channels will load here -->
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Broadcast Management -->
-                <div class="manage-card">
-                    <div class="card-header">
-                        <div class="icon-box purple-bg"><i class="fa-solid fa-bullhorn"></i></div>
-                        <div class="header-split">
+            <!-- 🛡️ FORCE SUB TAB -->
+            <div id="view-forcesub" class="view-section" style="display: none;">
+                <div class="management-grid">
+                    <div class="manage-card">
+                        <div class="card-header">
+                            <div class="icon-box"><i class="fa-solid fa-shield-halved"></i></div>
                             <div>
-                                <h3>Broadcast Message</h3>
-                                <p>Send message to all users at once</p>
+                                <h3>Force Subscribe Option</h3>
+                                <p>Users must subscribe to use bot</p>
                             </div>
-                            <span class="badge" id="broadcastBadge">Total Users: 0</span>
                         </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="tabs">
-                            <div class="tab active"><i class="fa-solid fa-comment-dots"></i> Text Message</div>
-                            <div class="tab disabled"><i class="fa-solid fa-image"></i> Photo</div>
-                            <div class="tab disabled"><i class="fa-solid fa-video"></i> Video</div>
-                        </div>
-                        <div class="input-group mt-3">
-                            <label>Message Text</label>
-                            <textarea id="bMsg" rows="5" placeholder="Type your broadcast message here...\n\nYou can use HTML formatting like <b>bold</b>, <i>italic</i> etc."></textarea>
-                        </div>
-                        <div class="action-buttons">
-                            <button class="btn-outline"><i class="fa-solid fa-eye"></i> Preview</button>
-                            <button onclick="sendBroadcast()" class="btn-purple"><i class="fa-solid fa-paper-plane"></i> Send Broadcast</button>
+                        <div class="card-body">
+                            <div class="input-group">
+                                <label>Channel ID (@username)</label>
+                                <input type="text" id="chId" placeholder="e.g. @YK_King_Flim">
+                            </div>
+                            <div class="input-group">
+                                <label>Channel Link</label>
+                                <input type="text" id="chUrl" placeholder="https://t.me/...">
+                            </div>
+                            <button onclick="addSub()" class="btn-primary w-100"><i class="fa-solid fa-plus"></i> Add Channel</button>
+                            
+                            <div class="active-channels-section">
+                                <h4>Active Channels</h4>
+                                <ul id="subList" class="channel-list">
+                                    <!-- Channels will load here -->
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- 📢 BROADCAST TAB -->
+            <div id="view-broadcast" class="view-section" style="display: none;">
+                <div class="management-grid">
+                    <div class="manage-card">
+                        <div class="card-header">
+                            <div class="icon-box purple-bg"><i class="fa-solid fa-bullhorn"></i></div>
+                            <div class="header-split">
+                                <div>
+                                    <h3>Broadcast Message</h3>
+                                    <p>Send message to all users at once</p>
+                                </div>
+                                <span class="badge" id="broadcastBadge">Total Users: 0</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="input-group mt-3">
+                                <label>Message Text</label>
+                                <textarea id="bMsg" rows="6" placeholder="Type your broadcast message here..."></textarea>
+                            </div>
+                            <div class="action-buttons">
+                                <button onclick="sendBroadcast()" class="btn-purple w-100"><i class="fa-solid fa-paper-plane"></i> Send Broadcast</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
     <script src="script.js"></script>
