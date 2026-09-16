@@ -1,11 +1,74 @@
-import aiohttp
 import re
-import random
+import asyncio
+import cloudscraper
 import database as db
 
-# 🔴 IP Spoofing (প্রতিবার নতুন আইপি জেনারেট করবে)
-def get_random_ip():
-    return f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
+# 🔴 Cloudscraper: Cloudflare Bypass এর মাস্টার! 
+def fetch_link_sync(terabox_url, apis):
+    # রিয়েল ব্রাউজার সাজানোর জন্য cloudscraper
+    scraper = cloudscraper.create_scraper(browser={
+        'browser': 'chrome',
+        'platform': 'windows',
+        'desktop': True
+    })
+    
+    for api_url in apis:
+        try:
+            print(f"🔄 Cloudscraper Trying: {api_url}")
+            
+            # 1. POST APIs (1024teradl, savetube)
+            if "proxy" in api_url or "savetube" in api_url:
+                clean_api = api_url.split('?url=')[0]
+                domain = clean_api.split('/api')[0]
+                
+                headers = {
+                    "Origin": domain,
+                    "Referer": f"{domain}/",
+                    "Accept": "application/json"
+                }
+                
+                resp = scraper.post(clean_api, json={"url": terabox_url}, headers=headers, timeout=15)
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    link = data.get('dlink') or data.get('direct_link') or data.get('url')
+                    if not link and "response" in data and len(data["response"]) > 0:
+                        link = data["response"][0].get("resolutions", {}).get("Fast Download", data["response"][0].get("link"))
+                    if link: 
+                        print(f"✅ HACK SUCCESS (POST): {clean_api}")
+                        return link, 0, "Video.mp4"
+                else:
+                    print(f"❌ CF Blocked POST: {resp.status_code}")
+            
+            # 2. GET APIs
+            else:
+                req_url = f"{api_url}{terabox_url}" if api_url.endswith('=') else f"{api_url}?url={terabox_url}"
+                if "shorturl=" in api_url:
+                    match = re.search(r'/s/([a-zA-Z0-9_-]+)', terabox_url)
+                    if match: req_url = f"{api_url}{match.group(1)}"
+                    else: continue
+                
+                resp = scraper.get(req_url, timeout=15)
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if "list" in data and len(data["list"]) > 0:
+                        video = data["list"][0]
+                        print(f"✅ HACK SUCCESS (Worker): {api_url}")
+                        return video.get("dlink"), int(video.get("size", 0)), video.get("filename", "Video.mp4")
+                    
+                    link = data.get('dlink') or data.get('direct_link') or data.get('url')
+                    if link: 
+                        print(f"✅ HACK SUCCESS (GET): {api_url}")
+                        return link, 0, "Video.mp4"
+                else:
+                    print(f"❌ CF Blocked GET: {resp.status_code}")
+                    
+        except Exception as e:
+            print(f"⚠️ Error {api_url}: {str(e)[:30]}")
+            continue
+            
+    return None, None, None
 
 async def get_terabox_direct_link(text, request_type="download"):
     try:
@@ -18,74 +81,16 @@ async def get_terabox_direct_link(text, request_type="download"):
         
         # 🔥 Best Working APIs
         hidden_apis = [
+            "https://1024teradl.com/api/proxy",
             "https://terabox.hnn.workers.dev/api/get-info?shorturl=",
-            "https://ytshorts.savetube.me/api/v1/terabox-downloader",
-            "https://teraboxvideodownloader.nepcoderdevs.workers.dev/?url=",
-            "https://1024teradl.com/api/proxy"
+            "https://teraboxvideodownloader.nepcoderdevs.workers.dev/?url="
         ]
         all_apis = user_apis + hidden_apis
         
-        timeout = aiohttp.ClientTimeout(total=10)
+        # 🚀 Asyncio thread-এ synchronous cloudscraper রান করানো হচ্ছে
+        link, size, title = await asyncio.to_thread(fetch_link_sync, terabox_url, all_apis)
+        return link, size, title
         
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            for api_url in all_apis:
-                try:
-                    print(f"🔄 Trying (aiohttp spoofing): {api_url}")
-                    
-                    # 🔴 MAGIC HEADERS: Cloudflare ভাববে রিয়েল মানুষ আসছে
-                    headers = {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-                        "Accept": "application/json",
-                        "X-Forwarded-For": get_random_ip(), # ভুয়া আইপি
-                        "Referer": "https://www.google.com/"
-                    }
-                    
-                    # 1. POST API
-                    if "proxy" in api_url or "savetube" in api_url:
-                        clean_api = api_url.split('?url=')[0]
-                        domain = clean_api.split('/api')[0]
-                        headers["Origin"] = domain
-                        headers["Referer"] = f"{domain}/"
-                        
-                        async with session.post(clean_api, json={"url": terabox_url}, headers=headers) as resp:
-                            if resp.status == 200:
-                                data = await resp.json()
-                                link = data.get('dlink') or data.get('direct_link') or data.get('url')
-                                if not link and "response" in data and len(data["response"]) > 0:
-                                    link = data["response"][0].get("resolutions", {}).get("Fast Download", data["response"][0].get("link"))
-                                if link: 
-                                    print(f"✅ SUCCESS (POST): {clean_api}")
-                                    return link, 0, "Video.mp4"
-                            else:
-                                print(f"❌ POST Blocked: Status {resp.status}")
-                    
-                    # 2. GET API
-                    else:
-                        req_url = f"{api_url}{terabox_url}" if api_url.endswith('=') else f"{api_url}?url={terabox_url}"
-                        if "shorturl=" in api_url:
-                            short_match = re.search(r'/s/([a-zA-Z0-9_-]+)', terabox_url)
-                            if short_match: req_url = f"{api_url}{short_match.group(1)}"
-                            else: continue
-                            
-                        async with session.get(req_url, headers=headers) as resp:
-                            if resp.status == 200:
-                                data = await resp.json()
-                                if "list" in data and len(data["list"]) > 0:
-                                    video = data["list"][0]
-                                    print(f"✅ SUCCESS (Worker): {api_url}")
-                                    return video.get("dlink"), int(video.get("size", 0)), video.get("filename", "Video.mp4")
-                                
-                                link = data.get('dlink') or data.get('direct_link') or data.get('url')
-                                if link: 
-                                    print(f"✅ SUCCESS (GET): {api_url}")
-                                    return link, 0, "Video.mp4"
-                            else:
-                                print(f"❌ GET Blocked: Status {resp.status}")
-                
-                except Exception as e:
-                    print(f"⚠️ Failed {api_url}: {str(e)[:30]}")
-                    continue 
-                    
     except Exception as e:
         print(f"🚨 Main Error: {e}")
         
